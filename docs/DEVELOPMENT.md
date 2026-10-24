@@ -1,67 +1,153 @@
 # Development guide
 
-## Project status
+Start with [Decisions and scope](DECISIONS.md) for the agreed direction. The repository's main README is written for listeners; keep development details in `docs/`.
 
-AudioTales is at the initial planning stage. This document records the intended architecture and implementation priorities. The Android project, build configuration, reporting backend, and release pipeline have not been created yet.
+## Scaffold status
 
-Keep `README.md` focused on listeners. Put setup instructions, architecture decisions, and contributor guidance in `docs/`. The project uses the [MIT license](../LICENSE).
+The initial scaffold provides a native Android app shell with a real, initially empty local library. It establishes:
 
-## Platform and stack
+- Compose screens, Navigation 3, lifecycle-aware ViewModels, and Hilt dependency injection.
+- Room 3 storage for books, tracks, listening progress, and bookmarks.
+- A persistent system/light/dark appearance preference using DataStore.
+- One Media3 library service and a phone-side controller connection.
+- Android Auto discovery and browsable library declarations.
+- A Gradle wrapper, pinned dependencies, and a GitHub Actions verification workflow.
 
-The minimum supported Android version is **Android 8.0, API 26**. Use current stable compile and target SDKs when creating the project. Gate newer platform APIs where necessary, and test the fallback behavior on API 26.
+Book import, usable book playback controls, progress restoration, chapter navigation, downloads, artwork loading, catalogue APIs, and issue submission are follow-up features. No reporting backend is provisioned. Android Auto declarations do not constitute device or car acceptance testing.
 
-| Area | Planned choice |
+## Toolchain
+
+The minimum Android version remains **API 26 / Android 8.0**. The current scaffold compiles and targets **API 37**.
+
+| Component | Pin |
 | --- | --- |
-| Language | Kotlin |
-| Interface | Jetpack Compose and stable Material 3 |
-| Navigation | Navigation 3 |
-| State | ViewModel, StateFlow, coroutines, and unidirectional data flow |
-| Dependency injection | Hilt |
-| Structured storage | Room |
-| Preferences | DataStore |
-| Networking | Retrofit, OkHttp, and kotlinx.serialization |
-| Artwork | Coil |
-| Playback | AndroidX Media3 and ExoPlayer |
+| Build JDK and Java target | 17 |
+| Gradle wrapper | 9.6.0 |
+| Android Gradle plugin | 9.4.1 |
+| Kotlin / Compose compiler / serialization plugin | 2.4.21 |
+| Compose BOM | 2026.09.00 |
+| KSP | 2.3.12 |
+| Dagger/Hilt | 2.60.1 |
+| AndroidX Hilt | 1.4.0 |
+| Navigation 3 | 1.2.0 |
+| Room 3 | 3.0.3 |
+| DataStore | 1.3.0 |
+| Media3 | 1.11.1 |
 
-Confirm compatible stable versions together when scaffolding the app. Record Android Studio, JDK, SDK, and dependency requirements alongside working build commands after the build is verified.
+The [version catalogue](../gradle/libs.versions.toml) is the source of truth for dependency versions. Keep the Compose compiler and serialization plugins aligned with Kotlin.
 
-## Playback and Android Auto
+AGP 9 supplies built-in Kotlin support. Do not also apply `org.jetbrains.kotlin.android` or `kapt`. Hilt and Room use KSP. Room 3 uses the `androidx.room3` namespace and `room3` Gradle extension.
 
-A single `MediaLibraryService` will own the ExoPlayer instance and `MediaLibrarySession`. The phone interface will connect through a `MediaController`; it will not create a separate player.
+Gradle 9.6 is retained within the selected Kotlin toolchain's documented compatibility range. The optional configuration cache is not enabled: the initial local run encountered an internal cache serialization error. Ordinary build caching remains enabled.
 
-The service will expose a browsable audiobook library and consistent playback actions for Android Auto, system media controls, and other supported controllers. Start with the standard media browser integration. Treat Android Auto compatibility separately from the phone app’s minimum SDK.
+## Local setup
 
-Persist playback position, selected book, and relevant playback settings so listening can resume after process death or a restart. Design chapters, bookmarks, playback speed, and the sleep timer around this shared playback state.
+1. Install a JDK 17 distribution and an Android Studio version that supports the pinned Android Gradle plugin.
+2. Install the Android SDK platform for API 37 and Build Tools 36.0.0 using Android Studio's SDK Manager. The current Android CLI package names are `platforms/android-37.0` and `build-tools/36.0.0`.
+3. Accept the SDK licenses through the SDK Manager.
+4. Open the repository root in Android Studio. For command-line builds, set `ANDROID_HOME` to the SDK directory or create an untracked `local.properties` containing `sdk.dir=/absolute/path/to/android-sdk`.
+5. Use the checked-in wrapper; a separate Gradle installation is unnecessary.
 
-## Library and downloads
+From the repository root:
 
-Use the Storage Access Framework for user-selected files and folders, retaining URI permissions where available. Handle moved files and revoked permissions with a clear recovery path.
+```sh
+./gradlew :app:assembleDebug :app:lintDebug :app:testDebugUnitTest
+```
 
-Use Room for library metadata, progress, bookmarks, and download records. Use DataStore for preferences. Keep user-owned source files distinct from app-managed downloads.
+On Windows, use `gradlew.bat` with the same tasks.
 
-Evaluate Media3 download facilities for supported media sources. Use WorkManager for suitable deferred work, including report uploads and retries; choose download execution mechanisms according to transfer size, user initiation, and platform requirements.
+The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Install it on an API 26+ emulator or device from Android Studio, or with:
 
-## Problem reporting
+```sh
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
 
-The planned reporting flow lets a listener describe a problem and tap **Send** without a GitHub account.
+This development build opens an empty library. It does not yet import audiobooks.
 
-1. Create a stable report ID and persist the report locally.
-2. Upload through a durable queue with offline recovery and bounded retries.
-3. Have a reporting backend validate and redact the submission, store diagnostics privately, and create a sanitized GitHub issue.
-4. Return a receipt and report status to the app.
+## Code structure
 
-The repository is intended to remain private during development. A GitHub issue URL therefore cannot be the only way a listener tracks a report. Provide app-visible status and, if follow-up is implemented, a scoped per-report credential.
+One `:app` module is intentional. Keep boundaries clear and extract modules when the implementation justifies it.
 
-Keep GitHub App credentials exclusively on the backend, with issue-writing access limited to the project repository. Never embed maintainer credentials in the APK. Keep local logs bounded and redacted, excluding credentials, signed URLs, audiobook contents, and unnecessary personal or library details. Redact the diagnostic bundle on the device before upload, with backend validation and redaction as an additional check. Let listeners review the diagnostic information they submit.
+| Location | Responsibility |
+| --- | --- |
+| `app/src/main/java/io/github/drolevar/audiotales/ui/` | Compose navigation, screens, theme, and ViewModels |
+| `data/library/` | Stable library models and repository contract |
+| `data/local/` | Room entities, DAO, and database |
+| `data/preferences/` | DataStore preferences |
+| `di/` | Application-scoped persistence dependencies |
+| `playback/` | Media library service, item resolution, and controller connection |
+| `app/src/main/res/xml/automotive_app_desc.xml` | Android Auto media app declaration |
+| `app/schemas/` | Generated Room schema history |
+| `docs/` | Decisions, development instructions, and verification status |
 
-Detailed diagnostic bundles must require authenticated maintainer access. Retry handling must reconcile uncertain issue-creation results to reduce duplicates. Automatic crash uploads require a separate opt-in.
+The application ID and namespace are `io.github.drolevar.audiotales`. Debug builds use `io.github.drolevar.audiotales.debug`. The app label is **AudioTales**, and the initial version is `0.1.0-dev` (`0.1.0-dev-debug` for debug builds).
 
-A Cloudflare Worker with private R2 storage is a candidate backend, not a deployed dependency.
+## Playback and data boundaries
 
-## Implementation order and verification
+The service owns ExoPlayer and the MediaLibrarySession. Each Activity owns its MediaController connection and releases it with the UI lifecycle, so stopping one Activity does not disconnect another. Releasing a phone controller must not release the service player during ongoing playback.
 
-Begin with library import, reliable local playback, and progress restoration. Add Android Auto browsing and playback next, followed by downloads and reporting.
+Only controllers Android/Media3 identifies as trusted can browse or control the library. This prevents arbitrary apps from reading audiobook titles. Hosts without that trust are rejected; verify supported Android Auto and DHU connections before release. Keep the legacy service binding probe distinct from the later verified controller connection.
 
-Keep clear boundaries between the interface, playback service, library storage, downloads, and diagnostics. Split these into Gradle modules when the implementation benefits from it.
+Books and tracks have stable IDs. Resolve external media requests against the repository and construct playable items from the stored source; do not accept a caller-supplied URI as authority. Browsing an empty library should succeed with an empty result.
 
-Prioritize verification of API 26 behavior, process recreation, permission loss, audio interruptions, chapter transitions, and Android Auto controls. For reporting, verify redaction, offline retries, duplicate prevention, and private diagnostic access. Preserve release identifiers and R8 mappings so reports can be traced to the shipped build.
+Listening progress records both track identity and position in milliseconds. Preserve this distinction when importing multi-file books. Room schema migrations must preserve progress and bookmarks; do not add destructive migration fallbacks.
+
+Keep file access behind repository/import code. The next import implementation must persist eligible Storage Access Framework URI grants and handle revoked access or moved files. Initial system backup is disabled pending a deliberate restore policy.
+
+## Reporting boundary
+
+The accepted reporting flow is recorded in [decisions 7–9](DECISIONS.md#7-convenient-automatic-reporting--accepted). The scaffold does not expose a nonfunctional Send control or upload diagnostics.
+
+Future implementation must redact on-device, persist an outbox, retry safely, and use a server-side GitHub App. A receipt/status flow must work without granting listeners access to the private repository. Detailed bundles require authenticated maintainer access. Automatic crash uploads remain a separate opt-in.
+
+Retrofit, OkHttp, kotlinx.serialization, Coil, and WorkManager are the agreed tools for the features that need them. Add and wire integrations as those features arrive instead of constructing unused clients or workers.
+
+## Verification
+
+The initial local verification completed successfully on 2026-10-24 with JDK 17.0.21, AGP 9.4.1, and the checked-in Gradle wrapper:
+
+| Check | Result |
+| --- | --- |
+| `:app:assembleDebug` | Passed; debug APK generated |
+| `:app:lintDebug` | Passed; no errors |
+| `:app:testDebugUnitTest` | 4 passed; no failures, errors, or skipped tests |
+| Room schema generation | Passed; version 1 schema committed in `app/schemas/` |
+| APK manifest inspection | Minimum SDK 26, target/compile SDK 37, debug application ID verified |
+
+The focused tests cover persisted-source resolution, rejection of supplied playback locations, rejection of URI-shaped media IDs, and rejection of an entire request containing an unknown track. Lint reports a non-blocking newer-Gradle notice; the chosen version is retained for toolchain compatibility.
+
+No emulator, physical-device, or Android Auto/DHU acceptance tests have run yet.
+
+The GitHub Actions workflow verifies the Gradle wrapper, builds the debug APK, runs Android lint and local unit tests, and retains useful build artifacts. It does not publish to an app store or provision a reporting service.
+
+Two lint exceptions are scoped in the manifest and must remain deliberate: the exported media service is protected by the verified-controller gate, and the voice-search intent requirement is deferred until search-to-playback resolution exists. Remove the latter exception when implementing voice search. There is no global lint disable or lint baseline.
+
+Before calling the player ready for listeners, also perform:
+
+- API 26 and current-platform launch, navigation, theme, and process recreation checks.
+- Storage permission loss and file movement recovery checks.
+- Playback interruptions, headphone disconnection, service lifetime, and durable resume checks.
+- Android Auto/DHU browsing, media controls, and real playback checks.
+- Reporting redaction, offline retry, reconciliation, and private-log access checks when reporting exists.
+
+Record what actually ran. A passing build does not replace these device-level checks.
+
+## Release preparation
+
+Release signing is not configured. Keep signing keys and credentials outside the repository. Preserve each release's version, Git commit, and R8 mappings for diagnostics. Distribution channels, release automation, and a public repository transition remain separate decisions.
+
+## Primary references
+
+Version and API choices were checked against official documentation on 2026-10-24:
+
+- [AGP 9.4 compatibility](https://developer.android.com/build/releases/agp-9-4-0-release-notes)
+- [Gradle 9.6 release notes](https://docs.gradle.org/9.6.0/release-notes.html)
+- [AGP built-in Kotlin](https://developer.android.com/build/migrate-to-built-in-kotlin)
+- [Kotlin Gradle compatibility](https://kotlinlang.org/docs/gradle-configure-project.html)
+- [Compose setup and compiler](https://developer.android.com/develop/ui/compose/setup-compose-dependencies-and-compiler)
+- [Navigation 3 releases](https://developer.android.com/jetpack/androidx/releases/navigation3)
+- [Room 3 releases and schema configuration](https://developer.android.com/jetpack/androidx/releases/room3)
+- [Hilt Gradle setup](https://dagger.dev/hilt/gradle-setup.html)
+- [Media3 releases](https://developer.android.com/jetpack/androidx/releases/media3)
+- [Media library service](https://developer.android.com/media/media3/session/serve-content)
+- [Android Auto media apps](https://developer.android.com/training/cars/media/auto)

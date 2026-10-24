@@ -105,6 +105,10 @@ Start with one `:app` Gradle module and clear packages for UI, library data, pla
 
 Use `io.github.drolevar.audiotales` as the initial application ID and Kotlin namespace, and **AudioTales** as the app label. Confirm identity before the first externally distributed release.
 
+Use the stable Room 3 line for this new project, with its `androidx.room3` APIs and KSP compiler. Keep the minimum SDK at 26 while compiling and targeting API 37. Pin and verify the complete toolchain together.
+
+System backup is initially disabled until a restore strategy is defined for persisted file access, listening state, and report credentials. Cloud sync and account-based recovery are deferred.
+
 The first scaffold should include:
 
 - A launchable Compose app with an honest empty library and working navigation.

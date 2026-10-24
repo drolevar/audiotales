@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">AudioTales</string>
+    <string name="settings">Settings</string>
+    <string name="back">Back</string>
+    <string name="your_library">Your library</string>
+    <string name="library_loading">Opening your library…</string>
+    <string name="library_empty_title">No books yet</string>
+    <string name="library_empty_description">Your audiobooks will appear here. Adding books from your device is coming next.</string>
+    <string name="library_error_title">Your library could not be opened</string>
+    <string name="library_error_description">Please try again. Your saved library has not been cleared.</string>
+    <string name="try_again">Try again</string>
+    <string name="appearance">Appearance</string>
+    <string name="appearance_description">Choose a look that feels comfortable for you.</string>
+    <string name="theme_system">Use device setting</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="preference_save_error">Your preference could not be saved. Please try again.</string>
+    <string name="about_audiotales">About AudioTales</string>
+    <string name="version_label">Version %1$s</string>
+    <string name="about_description">An audiobook player for the books you love, wherever you listen.</string>
+    <string name="about_development_status">AudioTales is in early development. Audiobook import, listening controls and in-app problem reporting are still being built.</string>
+    <string name="mit_license">MIT License</string>
+    <string name="copyright_notice">Copyright © 2026 Andrij Abyzov</string>
+</resources>
