@@ -217,12 +217,12 @@ internal fun DownloadsContent(
         AlertDialog(
             onDismissRequest = { removeId = null },
             title = { Text(stringResource(R.string.downloads_remove_title)) },
-            text = { Text(stringResource(R.string.downloads_remove_message, item.entry.book.title)) },
+            text = { Text(stringResource(R.string.downloads_remove_message, item.entry.book.title), Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = {
                 TextButton(
                     enabled = item.entry.book.id !in state.busyBooks && !item.summary.removing,
                     onClick = { removeId = null; onRemove(item.entry.book.id) },
-                ) { Text(stringResource(R.string.downloads_remove)) }
+                ) { Text(stringResource(R.string.remove)) }
             },
             dismissButton = {
                 TextButton(onClick = { removeId = null }) { Text(stringResource(R.string.downloads_cancel)) }

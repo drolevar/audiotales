@@ -240,7 +240,7 @@ internal fun AddLibraryDialog(
     modifier: Modifier = Modifier,
 ) {
     AlertDialog(
-        modifier = modifier.imePadding(),
+        modifier = modifier,
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.catalogue_add_library)) },
         text = {

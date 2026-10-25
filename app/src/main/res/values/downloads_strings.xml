@@ -31,7 +31,7 @@
     <string name="downloads_options">Download options for %1$s</string>
     <string name="downloads_details">Download details</string>
     <string name="downloads_remove">Remove downloads</string>
-    <string name="downloads_remove_title">Remove downloaded audio?</string>
+    <string name="downloads_remove_title">Remove audio?</string>
     <string name="downloads_remove_message">Remove downloaded audio for “%1$s”? The book and your listening history stay in My books.</string>
     <string name="downloads_cancel">Cancel</string>
     <string name="downloads_close">Close</string>

@@ -54,7 +54,7 @@
     <string name="catalogue_remove">Remove</string>
     <string name="catalogue_rename_library">Rename library</string>
     <string name="catalogue_library_name">Library name</string>
-    <string name="catalogue_remove_library">Remove %1$s?</string>
+    <string name="catalogue_remove_library">Remove library?</string>
     <string name="catalogue_remove_library_help">This removes the library from Browse. Saved books, downloads, and listening history are kept.</string>
     <string name="catalogue_manage_help">Select libraries to include in Browse. Tap a library name to browse its catalogue.</string>
 </resources>

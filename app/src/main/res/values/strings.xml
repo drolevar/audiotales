@@ -12,6 +12,7 @@
     <string name="library_empty_title">No books yet</string>
     <string name="library_empty_description">Find and save a book in Browse to start listening.</string>
     <string name="cancel">Cancel</string>
+    <string name="remove">Remove</string>
     <string name="online_book_network_error">Could not reach the provider. Check your connection and try again.</string>
     <string name="online_book_response_error">The provider did not return the book. Try again later.</string>
     <string name="online_book_format_error">This book’s page or track list could not be read. The book has not been added.</string>

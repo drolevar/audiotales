@@ -232,8 +232,8 @@ internal fun BookDetailsScreen(
     }
     if (confirmRemoval) AlertDialog(
         onDismissRequest = { confirmRemoval = false }, title = { Text(stringResource(R.string.collection_remove_title)) },
-        text = { Text(stringResource(R.string.collection_remove_description, book?.title.orEmpty())) },
-        confirmButton = { TextButton(onClick = { confirmRemoval = false; onRemoveDownloads() }) { Text(stringResource(R.string.collection_remove_downloads)) } },
+        text = { Text(stringResource(R.string.collection_remove_description, book?.title.orEmpty()), Modifier.verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { confirmRemoval = false; onRemoveDownloads() }) { Text(stringResource(R.string.remove)) } },
         dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }

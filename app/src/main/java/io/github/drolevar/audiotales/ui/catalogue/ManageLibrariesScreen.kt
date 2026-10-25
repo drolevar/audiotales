@@ -4,8 +4,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -105,10 +107,10 @@ internal fun LibraryManagementDialogs(
 ) {
     state.editingLibrary?.let { library ->
         AlertDialog(
-            modifier = Modifier.imePadding(), onDismissRequest = onDismiss,
+            onDismissRequest = onDismiss,
             title = { Text(stringResource(R.string.catalogue_rename_library)) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     OutlinedTextField(
                         value = state.libraryName, onValueChange = onNameChanged,
                         label = { Text(stringResource(R.string.catalogue_library_name)) },
@@ -128,8 +130,10 @@ internal fun LibraryManagementDialogs(
     state.removingLibrary?.let { library ->
         AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text(stringResource(R.string.catalogue_remove_library, library.displayName)) },
-            text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            title = { Text(stringResource(R.string.catalogue_remove_library)) },
+            text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(library.displayName, style = MaterialTheme.typography.titleMedium)
+                Text(library.baseUrl, style = MaterialTheme.typography.bodySmall)
                 Text(stringResource(R.string.catalogue_remove_library_help))
                 state.libraryActionError?.let { Text(stringResource(it.messageResource), color = MaterialTheme.colorScheme.error) }
                 if (state.changingLibrary) LinearProgressIndicator(Modifier.fillMaxWidth())

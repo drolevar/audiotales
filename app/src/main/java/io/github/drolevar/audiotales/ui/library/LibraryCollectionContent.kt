@@ -49,71 +49,78 @@ internal fun LibraryCollectionContent(
     modifier: Modifier = Modifier,
 ) {
     var sortExpanded by rememberSaveable { mutableStateOf(false) }
-    Column(modifier.widthIn(max = 720.dp).fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            CollectionFilter.entries.forEach { filter ->
-                FilterChip(
-                    selected = state.filter == filter,
-                    onClick = { onFilterChange(filter) },
-                    label = { Text(collectionFilterLabel(filter)) },
-                    leadingIcon = if (state.filter == filter) {
-                        { Icon(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp)) }
-                    } else null,
-                )
+    LazyColumn(modifier.widthIn(max = 720.dp).fillMaxSize()) {
+        item(key = "collection:filters") {
+            Row(
+                Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                CollectionFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = state.filter == filter,
+                        onClick = { onFilterChange(filter) },
+                        label = { Text(collectionFilterLabel(filter)) },
+                        leadingIcon = if (state.filter == filter) {
+                            { Icon(painterResource(R.drawable.ic_check), null, Modifier.size(18.dp)) }
+                        } else null,
+                    )
+                }
             }
         }
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text(
-                pluralStringResource(R.plurals.library_book_count, state.rows.size, state.rows.size),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Box {
-                val sortLabel = collectionSortLabel(state.sort)
-                val sortDescription = stringResource(R.string.collection_sort, sortLabel)
-                TextButton(
-                    onClick = { sortExpanded = true },
-                    modifier = Modifier.semantics { contentDescription = sortDescription },
-                ) {
-                    Text(sortLabel, color = MaterialTheme.colorScheme.onSurface)
-                    Icon(painterResource(R.drawable.ic_chevron_down), null, Modifier.padding(start = 16.dp).size(24.dp))
-                }
-                DropdownMenu(expanded = sortExpanded, onDismissRequest = { sortExpanded = false }) {
-                    CollectionSort.entries.forEach { sort ->
-                        DropdownMenuItem(
-                            text = { Text(collectionSortLabel(sort)) },
-                            leadingIcon = if (state.sort == sort) {
-                                { Icon(painterResource(R.drawable.ic_check), null) }
-                            } else null,
-                            onClick = { sortExpanded = false; onSortChange(sort) },
-                        )
+        item(key = "collection:sort") {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    pluralStringResource(R.plurals.library_book_count, state.rows.size, state.rows.size),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Box {
+                    val sortLabel = collectionSortLabel(state.sort)
+                    val sortDescription = stringResource(R.string.collection_sort, sortLabel)
+                    TextButton(
+                        onClick = { sortExpanded = true },
+                        modifier = Modifier.semantics { contentDescription = sortDescription },
+                    ) {
+                        Text(sortLabel, color = MaterialTheme.colorScheme.onSurface)
+                        Icon(painterResource(R.drawable.ic_chevron_down), null, Modifier.padding(start = 16.dp).size(24.dp))
+                    }
+                    DropdownMenu(expanded = sortExpanded, onDismissRequest = { sortExpanded = false }) {
+                        CollectionSort.entries.forEach { sort ->
+                            DropdownMenuItem(
+                                text = { Text(collectionSortLabel(sort)) },
+                                leadingIcon = if (state.sort == sort) {
+                                    { Icon(painterResource(R.drawable.ic_check), null) }
+                                } else null,
+                                onClick = { sortExpanded = false; onSortChange(sort) },
+                            )
+                        }
                     }
                 }
             }
         }
         if (state.actionFailed) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.collection_action_failed), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
-                TextButton(onClick = onDismissActionError) { Text(stringResource(R.string.collection_dismiss)) }
+            item(key = "collection:action_error") {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.collection_action_failed), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onDismissActionError) { Text(stringResource(R.string.collection_dismiss)) }
+                }
             }
         }
         if (state.rows.isEmpty()) {
-            Column(
-                Modifier.fillMaxSize().padding(24.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(stringResource(R.string.collection_no_matches), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.collection_no_matches_description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            item(key = "collection:no_matches") {
+                Column(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(stringResource(R.string.collection_no_matches), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.collection_no_matches_description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-        } else LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+        } else {
             items(state.rows, key = { it.entry.book.id }) { row ->
                 val id = row.entry.book.id
                 BookListItem(

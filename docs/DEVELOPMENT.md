@@ -228,6 +228,19 @@ API 35 runtime checks used the existing three-book, 31-track collection and real
 
 Validation corrected two selector/setup mistakes: identical search-field/result titles needed a specific result selector, and a process killed while the Activity was still paused had no saved Activity state yet. The stopped-Activity restoration check passed. LibriVox also returned an unfinished Walden project with no source page/audio URLs; inspection correctly showed an unavailable-book state, while the completed recording succeeded. A missing theme argument in a preview was fixed before the passing build. These observations do not establish broader provider availability, Android Auto behavior, or API 26/current-platform qualification. Player arrangement/tools and the full six-screen design audit remain separate work.
 
+### Constrained-window UI corrections — 2026-10-25
+
+A follow-up non-player audit reproduced three problems on API 35 at **600 × 320 dp, font scale 2.0**: fixed collection controls left almost no room for books; removal headings/actions displaced their explanations; and extra IME padding collapsed the library input dialogs when the landscape keyboard opened. Collection controls now scroll with the books. Native removal dialogs use concise headings and scrollable identity/explanation content. Add and Rename keep Android's default keyboard positioning without extra outer IME padding.
+
+The final JDK 21 `assembleDebug`, `lintDebug` and `testDebugUnitTest` run passed in **1m 28s**, with **79 passing JVM tests**, **0 lint errors, 9 warnings and 1 hint**. Independent review found no actionable defects. API 35 runtime checks verified:
+
+- Scrolling reached all four saved-book action targets in the short window, including in dark mode. The normal portrait collection retained its fitted artwork, filters, sort menu and approved navigation. Downloaded filtering returned two books; Author sorting changed their order.
+- Source identity and the preservation explanation remained reachable in the library-removal dialog. My books, Downloads and Book details each exposed scrollable download-removal text with working Cancel; dark-mode details retained readable text and actions.
+- The landscape keyboard left the Add/Rename fields visible. Editing a library name and submitting with the keyboard's Done action succeeded; the original name was restored. An invalid library address produced a scrollable validation message.
+- After cancellation and renaming back, all four book rows, 54 tracks, four progress rows, the empty bookmark table and three source records matched the input fixture exactly. All 12 downloaded audio files, totalling 57,972,201 bytes, retained identical hashes.
+
+The audit also inspected the existing 320 × 600 dp large-text surfaces. API 26/current-platform qualification, TalkBack, the complete empty/error-state matrix and the full six-screen audit are still outstanding. Player layout remains on hold at the user's request; the sleep timer remains unfinished. No player code changed in this correction.
+
 ## Release preparation
 
 Release signing is not configured. Keep signing keys and credentials outside the repository. Preserve each release's version, Git commit, and R8 mappings for diagnostics. Distribution channels, release automation, and a public repository transition remain separate decisions.

@@ -30,7 +30,7 @@
     <string name="collection_open_player">Open player</string>
     <string name="collection_book_actions">Actions for %1$s</string>
     <string name="collection_remove_downloads">Remove downloads</string>
-    <string name="collection_remove_title">Remove downloaded audio?</string>
+    <string name="collection_remove_title">Remove audio?</string>
     <string name="collection_remove_description">The downloaded audio for “%1$s” will be removed. Your book and listening position will be kept.</string>
     <string name="collection_cancel">Cancel</string>
     <string name="collection_action_failed">Could not update downloads. Check your connection and try again.</string>

@@ -1,6 +1,8 @@
 package io.github.drolevar.audiotales.ui.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -123,8 +125,8 @@ internal fun BookListItem(
     if (confirmRemoval) AlertDialog(
         onDismissRequest = { confirmRemoval = false },
         title = { Text(stringResource(R.string.collection_remove_title)) },
-        text = { Text(stringResource(R.string.collection_remove_description, book.title)) },
-        confirmButton = { TextButton(onClick = { confirmRemoval = false; onRemoveDownloads() }) { Text(stringResource(R.string.collection_remove_downloads)) } },
+        text = { Text(stringResource(R.string.collection_remove_description, book.title), Modifier.verticalScroll(rememberScrollState())) },
+        confirmButton = { TextButton(onClick = { confirmRemoval = false; onRemoveDownloads() }) { Text(stringResource(R.string.remove)) } },
         dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text(stringResource(R.string.collection_cancel)) } },
     )
 }
