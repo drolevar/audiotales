@@ -6,9 +6,9 @@ This is the durable record of the choices made for AudioTales. **Accepted** mean
 
 ## 1. Product and distribution — accepted
 
-AudioTales is a native Android audiobook player, with Android Auto support as a first-class requirement. It is built for listening to a personal audiobook library, including local M4B books and books split across MP3 files.
+AudioTales is a native Android audiobook player, with Android Auto support as a first-class requirement. Its primary use case is finding or opening books from online audiobook libraries, listening online, and downloading them for offline listening. Local M4B and multi-file MP3 import remains a secondary supported direction.
 
-The intended listening features are reliable resume, chapters, bookmarks, adjustable playback speed, a sleep timer, offline listening, and car controls. Remote catalogue access and managed downloads fit the architecture; a particular catalogue provider has not been chosen.
+The intended listening features are reliable resume, chapters, bookmarks, adjustable playback speed, a sleep timer, offline listening, and car controls. Online catalogue access and managed downloads are core product features. The user's audioknigi.com.ua example is the first integration to investigate; provider compatibility is not established merely by selecting it. See decision 14 for the 2026-10-25 priority clarification, which supersedes the initial local-import-first delivery order.
 
 The project lives at [drolevar/audiotales](https://github.com/drolevar/audiotales). It is private during development and uses the [MIT license](../LICENSE). A public release date, store distribution, signing identity, and a date for making the repository public have not been selected.
 
@@ -117,7 +117,7 @@ The first scaffold should include:
 - A Gradle wrapper, a pinned version catalogue, release configuration, and a GitHub Actions build/lint/test workflow.
 - Focused validation of meaningful state and boundary behavior, without pretending device/car tests have run.
 
-Implement local import and durable playback next. Downloads, a report UI, the reporting backend, artwork, and catalogue integrations follow as actual features; do not expose nonfunctional Send or download controls.
+The initial scaffold plan put local import first. Decision 14 supersedes that sequence: establish one online-provider flow, reliable streaming/resume and managed offline downloads before local import. A report UI and backend follow as actual features; do not expose nonfunctional Send or download controls.
 
 ## 11. Verification and change management — accepted direction
 
@@ -126,3 +126,72 @@ Build and lint the scaffold, run relevant automated tests, and record the exact 
 Keep build tooling requirements and commands in `docs/DEVELOPMENT.md`. Keep secrets, local SDK paths, generated build output, and signing keys out of version control. Release signing and publishing require their own setup.
 
 For each material decision change, record its date, reason, consequences, and what it supersedes. Proposed services and future capabilities must stay distinguishable from code that is already implemented.
+
+## 12. UI design and implementation references — accepted 2026-10-25
+
+Follow the user-selected **Audiotales — Paper v5** Figma design book for the application's UI. These two nodes are the canonical design references:
+
+| Reference | Role |
+| --- | --- |
+| [Audiotales · Current design · v0.7.0](https://www.figma.com/design/LGhPAOlgrNdvcsUtrdBvqN/Audiotales--Paper-v5?node-id=27-404) | Main screen compositions and supporting states: My books, Search, Downloads, Manage libraries, Book details, and Now playing |
+| [Current UI / v0.7 reusable parts](https://www.figma.com/design/LGhPAOlgrNdvcsUtrdBvqN/Audiotales--Paper-v5?node-id=56-945) | Reusable icons, catalogue book row, and download row |
+
+The user also supplied the [official Material 3 Design Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit) on 2026-10-25. Use it as the Material component and design-token reference alongside the AudioTales compositions. The kit does not establish API availability in the project's pinned stable Compose or Media3 dependencies; verify that separately against current Android documentation.
+
+Access to the two AudioTales nodes, their names, structure and screenshots were verified through Figma MCP on 2026-10-25. The main board uses a 393 dp reference width and sample catalogue/playback data. Preserve the design's visual hierarchy, overall character and fitted, uncropped artwork while implementing with the accepted native Kotlin/Compose and stable Material 3 stack. The reference width is not a fixed device requirement. Retrieve current node-level design context and assets when implementing each screen.
+
+Clarified by the user on 2026-10-25: **native Android behavior takes priority over 100% fidelity to Figma**. Prefer Google-native or Google-endorsed modern practices. Where Google provides a control that covers the required behavior, use it and customize through its supported theming and composition APIs instead of recreating it to match the mockup. In particular, use Media3's Compose controls for playback. Apply this rule to navigation, search, selection, sheets, dialogs and other comparable UI decisions. A custom control needs a concrete behavioral gap in the provided controls, not merely a visual difference. Keep the accepted stable dependency policy; this preference does not authorize preview upgrades or replace the previously accepted architecture.
+
+Use platform behavior for back navigation, window insets, resizing, font scaling and accessibility. This clarification supersedes exact reproduction of Figma component treatment or interaction details where they conflict with native behavior. The [UI architecture proposal](UI-ARCHITECTURE.md) distinguishes these accepted principles from screen-level recommendations that remain proposed.
+
+This establishes the visual target for future UI work and supersedes treating the initial scaffold's appearance as the final design. It does not change the accepted playback architecture, feature delivery scope or catalogue-provider selection. Represent only working functionality in the app; sample content and future controls in the design are not evidence of implemented features.
+
+Clarified by the user on 2026-10-25: "other libraries" means **online audiobook libraries/catalogues and their providers**, not software libraries or framework dependencies. The other implementation uses React Native and Paper v5; consult it narrowly for how it communicates with a specific audiobook service, such as requests, response parsing, search, pagination, book/chapter metadata and media-source resolution. The user subsequently supplied its version 1.1.21 APK as the integration reference. Keep the artifact, extracted code and private investigation outside this application repository.
+
+Inspect only the relevant provider integration code when that work is needed. Do not use the other app's UI, React Native/Paper components, state management, playback or overall architecture as implementation guidance. The Figma design book guides the UI, and AudioTales' accepted native Android decisions govern implementation. Provider code is evidence to verify against the service's current behavior, not proof that an old integration still works. This clarification supersedes the broader wording "library/provider integration details." No feature implementation or Figma edits were made when registering these references.
+
+Further clarified on 2026-10-25: the full library/book-management surface may be investigated to locate integration paths, but **only the library API contract is reusable**: endpoint construction, parameters, response fields, identifiers, pagination and media resolution/headers. Legacy navigation, validation, saving, deletion, progress and download behavior are observations, not product requirements. Decide those behaviors independently from AudioTales' goals, the accepted native architecture, current Google guidance and the Figma composition references.
+
+## 13. Native UI foundation — implementation choices, 2026-10-25
+
+The first implementation slice applies the native-control policy to My books and Settings. Use Material 3's dynamic light/dark schemes by default on Android 12+, with a complete purple fallback derived from the Figma reference. A persisted **Use device colors** switch lets the listener choose the purple palette on supported devices. The existing System/Light/Dark setting remains independent. On earlier Android versions, use the purple palette and omit the unsupported device-color option. Enabling dynamic colors by default is a product choice, not a platform requirement.
+
+Use Material list items for book metadata, with a decorative placeholder until real artwork is available. Keep loading, empty, error and populated states explicit. Previews may use fixtures, but the real library stays repository-backed and initially empty. Do not add import, book-detail, playback, Search or Downloads actions until they work. This replaces the scaffold's initial teal appearance without changing playback, storage, toolchain or provider decisions.
+
+## 14. Online libraries and offline listening first — accepted 2026-10-25
+
+The user clarified that the main use case is **listening to and downloading books from online audiobook libraries**, with [this audioknigi.com.ua book page](https://audioknigi.com.ua/audio-86717-follett-ken-igolnoe-ushko-1) as a concrete example. The primary journey is to find or open a provider book, add it to My books, listen online, and download it for offline listening. Local-file import remains useful but is not a prerequisite for the primary journey. This supersedes the initial roadmap's local-M4B-first ordering and its placement of remote catalogues/downloads near the end.
+
+Start with one provider and a small, verifiable book-link-to-library flow, then real service-backed streaming with durable resume and managed offline downloads. Expand catalogue search/browsing and providers on that foundation. Preserve the Figma hierarchy and native-control policy; do not expose nonfunctional Search, Listen or Download actions while these are being implemented.
+
+The user subsequently supplied three concrete provider examples for this flow:
+
+- [Роберт Шеклі on librivox.club](https://librivox.club/audio/26923-robert-shekli-cherez-travnij-trakt-u-kosmos-za-dopomogoju-mantri-tantri-ta-strokatih-kolis).
+- [Игольное ушко on audioknigi.com.ua](https://audioknigi.com.ua/audio-86717-follett-ken-igolnoe-ushko-1).
+- [Following the Color Line on librivox.org](https://librivox.org/following-the-color-line-by-ray-stannard-baker/).
+
+Treat these as separate providers with independently verified contracts. Similar names do not establish a shared API. Share parsing or transport code only where current evidence supports it, and preserve provider-scoped identities.
+
+The user also clarified that the legacy app accepts a library base URL such as `https://audioknigi.com.ua` even without that domain being built in. Model configurable library instances separately from the protocols they implement; do not equate each domain with a required hardcoded adapter. Determine compatibility from an actual protocol contract. Support for arbitrary websites does not follow from accepting a URL. The three book links are integration examples, not a fixed provider allowlist.
+
+Keep provider/book/track identity separate from resolved transport URLs and local download locations. Refreshing a provider source or removing an app-managed download must preserve book identity, progress and bookmarks. Streaming and offline playback use the same single service-owned ExoPlayer and stable library IDs. A provider URL supplied through sharing or a link is input to a supported provider adapter, never authority for an external controller to play an arbitrary location.
+
+Evaluate Media3's DownloadManager, DownloadService and shared download cache first for the provider's actual media format. A separate download service is not a second player owner. Download state comes from the download subsystem, while Room retains library and listening identity. Full offline availability requires the complete required track set; a temporary playback cache or one downloaded track is not automatically a downloaded book.
+
+## 15. Saved collection, catalogue discovery and visual completion — accepted 2026-10-25
+
+After trying the first listening build, the user confirmed that it is an early functional slice and that the Figma design book remains the product's visual and functional target. Preserve decision 12: native Google controls and Android behavior take priority over exact reproduction of the React Native/Paper mockups. Missing artwork or unfinished screens are implementation gaps, not deliberate native adaptations.
+
+Keep the current adaptive navigation bar, its icons, and the My books / Browse / Settings destinations. **My books is the saved collection; Browse is online-library browsing and search.** Select and save books from Browse. Remove the direct book-URL entry action and dialog from My books; do not repurpose the saved collection as catalogue discovery. Adding a library's base URL remains a separate configuration operation in Browse.
+
+Display real provider covers in catalogue results, saved books and the player, fitted without cropping. Persist artwork identity and required request headers with the saved book, using additive migrations. Existing saved books should acquire missing artwork through metadata refresh without replacing their tracks or resetting progress/downloads. Missing or unavailable artwork must not prevent playback.
+
+Continue closing the remaining Figma gaps in coherent feature slices, including richer details, collection filters/sorting, library management and download presentation. Preserve the approved navigation when placing these features. Treat proposed controls as unfinished until their behavior is implemented and tested; completion of the first listening flow is not completion of the whole application.
+
+## 16. Collection and download surfaces — implementation choices, 2026-10-25
+
+My books follows the Figma collection hierarchy with All, In progress and Downloaded filters, a count and a sort menu. Recent means most recently listened, using the saved progress timestamp; unplayed books have a deterministic title fallback until an explicit added-date model is needed. Show a whole-book played percentage only when the durations of every required track are known. Otherwise show the saved track and position. Do not substitute track count for elapsed listening time.
+
+Downloads is a secondary destination reachable from My books and Settings, preserving the user-approved bottom navigation and its icons. It lists managed downloads and derives availability, progress, pause/resume/retry and removal state from Media3. Removal confirms that it deletes only downloaded audio, keeping the saved book and listening history. A book remains offline-ready only when its complete required track set is stored. Unknown byte lengths use an indeterminate indicator and real saved-track counts rather than a fabricated percentage. Keep the mini-player available on this screen.
+
+Use Material FilterChip, menus, dialogs, progress indicators and icon buttons with Material Symbols. This adapts the Paper mockup to the accepted native-control policy. These changes do not redefine full design completion: Browse/library management, full book details and the remaining player tools still require their own implementation and verification.

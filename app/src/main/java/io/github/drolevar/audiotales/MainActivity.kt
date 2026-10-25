@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            AudioTalesApp(onDarkThemeChanged = { darkTheme ->
+            AudioTalesApp(playbackConnection = playbackConnection, onDarkThemeChanged = { darkTheme ->
                 enableEdgeToEdge(
                     statusBarStyle = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) {
                         darkTheme

@@ -5,11 +5,19 @@ import androidx.room3.ForeignKey
 import androidx.room3.Index
 import androidx.room3.PrimaryKey
 
-@Entity(tableName = "books")
+@Entity(
+    tableName = "books",
+    indices = [Index(value = ["providerId", "providerBookId"], unique = true)],
+)
 data class BookEntity(
     @PrimaryKey val id: String,
     val title: String,
     val author: String? = null,
+    val providerId: String? = null,
+    val providerBookId: String? = null,
+    val sourceUrl: String? = null,
+    val coverUrl: String? = null,
+    val coverReferer: String? = null,
 )
 
 @Entity(
@@ -23,6 +31,7 @@ data class BookEntity(
     indices = [
         Index(value = ["bookId", "id"], unique = true),
         Index(value = ["bookId", "sequenceIndex"], unique = true),
+        Index(value = ["bookId", "providerTrackRef"], unique = true),
     ],
 )
 data class TrackEntity(
@@ -32,6 +41,9 @@ data class TrackEntity(
     val uri: String,
     val sequenceIndex: Int,
     val durationMs: Long? = null,
+    val providerTrackRef: String? = null,
+    val streamReferer: String? = null,
+    val downloadReferer: String? = null,
 )
 
 @Entity(
@@ -68,4 +80,12 @@ data class BookmarkEntity(
     val positionMs: Long,
     val label: String,
     val createdAtEpochMs: Long,
+)
+
+@Entity(tableName = "online_libraries", indices = [Index(value = ["baseUrl"], unique = true)])
+data class OnlineLibraryEntity(
+    @PrimaryKey val id: String,
+    val baseUrl: String,
+    val displayName: String,
+    val protocol: String,
 )

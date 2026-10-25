@@ -1,0 +1,4 @@
+<resources>
+    <string name="nav_downloads">Downloads</string>
+    <string name="nav_downloads_description">Manage books for offline listening</string>
+</resources>

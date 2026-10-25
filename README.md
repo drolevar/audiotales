@@ -1,18 +1,27 @@
 # AudioTales
 
-An audiobook player for Android, built around enjoying the books you already own—at home, on a walk, or in the car.
+An audiobook player for Android, built for discovering books in online libraries and enjoying them online or offline—at home, on a walk, or in the car.
 
-**AudioTales is in early development. There is no app release to download yet.** The features below describe what we’re working toward.
+**AudioTales is in early development. There is no public app release yet.**
+
+## Available in the development build
+
+- Add a compatible online library by its website address, browse or search its catalogue, and save books to My books.
+- See book covers in the catalogue, your saved collection and the player.
+- Filter saved books by listening or download state, and sort by recent listening, title or author.
+- Listen with play/pause, seeking, speed and track controls, and resume your saved position.
+- Download a book for offline listening. Manage downloads from My books or Settings, pause or resume transfers, and remove downloaded audio while keeping the book and listening position.
+
+Library support depends on the website's available service and the build's configuration; adding an address does not make every website compatible. A book is shown as available offline only after all tracks supplied by that library are saved.
 
 ## Planned features
 
-- **Your own audiobook library.** Open local audiobooks, including M4B files and books split across multiple MP3 files.
-- **Pick up where you left off.** Keep your listening position so you can return to a book without searching for your place.
 - **Chapters and bookmarks.** Navigate longer books and save moments you want to revisit.
-- **Playback that suits you.** Adjust listening speed and use a sleep timer when winding down.
+- **Sleep timer.** Stop playback automatically when winding down.
 - **Listening in the car.** Browse and control playback through Android Auto on supported phones and vehicles.
+- **Local audiobooks too.** Open M4B files and books split across multiple MP3 files.
 
-AudioTales is planned to support **Android 8.0 and later**. Android Auto has its own compatibility requirements.
+AudioTales requires **Android 8.0 and later**. Device testing is still in progress. Android Auto has its own compatibility requirements and has not yet been verified.
 
 ## Reporting a problem
 

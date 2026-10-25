@@ -22,6 +22,11 @@ class AppViewModel @Inject constructor(
         SharingStarted.Eagerly,
         ThemeMode.SYSTEM,
     )
+    val dynamicColor = preferences.dynamicColor.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        true,
+    )
     private val _preferenceSaveFailed = MutableStateFlow(false)
     val preferenceSaveFailed = _preferenceSaveFailed.asStateFlow()
 
@@ -29,6 +34,17 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 preferences.setThemeMode(themeMode)
+                _preferenceSaveFailed.value = false
+            } catch (_: IOException) {
+                _preferenceSaveFailed.value = true
+            }
+        }
+    }
+
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch {
+            try {
+                preferences.setDynamicColor(enabled)
                 _preferenceSaveFailed.value = false
             } catch (_: IOException) {
                 _preferenceSaveFailed.value = true

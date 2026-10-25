@@ -1,6 +1,7 @@
 package io.github.drolevar.audiotales.data.preferences
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -24,18 +25,29 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     private val store = context.settingsDataStore
     private val themeModeKey = stringPreferencesKey("theme_mode")
+    private val dynamicColorKey = booleanPreferencesKey("dynamic_color")
 
-    val themeMode: Flow<ThemeMode> = store.data
+    private val preferences = store.data
         .catch { error ->
             if (error is IOException) emit(emptyPreferences()) else throw error
         }
+
+    val themeMode: Flow<ThemeMode> = preferences
         .map { preferences ->
             ThemeMode.entries.firstOrNull { it.name == preferences[themeModeKey] }
                 ?: ThemeMode.SYSTEM
         }
         .distinctUntilChanged()
 
+    val dynamicColor: Flow<Boolean> = preferences
+        .map { it[dynamicColorKey] ?: true }
+        .distinctUntilChanged()
+
     suspend fun setThemeMode(themeMode: ThemeMode) {
         store.edit { it[themeModeKey] = themeMode.name }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        store.edit { it[dynamicColorKey] = enabled }
     }
 }

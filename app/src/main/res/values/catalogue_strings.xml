@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalogue_browse">Browse</string>
+    <string name="catalogue_add_library">Add library</string>
+    <string name="catalogue_choose_library">Choose library</string>
+    <string name="catalogue_base_url">Library base URL</string>
+    <string name="catalogue_add_library_help">Enter a compatible online library’s HTTPS address, such as https://librivox.org. AudioTales checks its catalogue before saving it.</string>
+    <string name="catalogue_no_libraries">Your online libraries</string>
+    <string name="catalogue_no_libraries_help">Add a compatible library to browse its books and search its catalogue.</string>
+    <string name="catalogue_search_hint">Search this catalogue</string>
+    <string name="catalogue_search">Search</string>
+    <string name="catalogue_loading">Loading catalogue…</string>
+    <string name="catalogue_checking">Checking library…</string>
+    <string name="catalogue_empty">No books found</string>
+    <string name="catalogue_empty_help">Try another search or library.</string>
+    <string name="catalogue_load_more">Load more</string>
+    <plurals name="catalogue_shown">
+        <item quantity="one">%1$d book shown</item>
+        <item quantity="other">%1$d books shown</item>
+    </plurals>
+    <string name="catalogue_results_for">Results for “%1$s”</string>
+    <string name="catalogue_details">Book details</string>
+    <string name="catalogue_description">Description</string>
+    <string name="catalogue_no_description">No description is available from this catalogue.</string>
+    <string name="catalogue_save">Save to My books</string>
+    <string name="catalogue_saving">Reading book and track list…</string>
+    <string name="catalogue_open_saved">Open saved book</string>
+    <string name="catalogue_saved">In My books</string>
+    <string name="catalogue_invalid_link">Enter a valid HTTPS library address or supported book-page link.</string>
+    <string name="catalogue_access_error">This library requires access that is not configured in this app. Try a different library.</string>
+    <string name="catalogue_unsupported_library">This address does not expose a supported audiobook catalogue.</string>
+    <string name="catalogue_library_error">Your online libraries could not be opened. Please try again.</string>
+    <string name="catalogue_response_error">This catalogue could not be read. The library may not be compatible, or its service may be temporarily unavailable.</string>
+    <string name="catalogue_query_error">Search text can contain up to 300 characters. Shorten your search and try again.</string>
+</resources>

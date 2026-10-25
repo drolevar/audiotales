@@ -1,0 +1,221 @@
+package io.github.drolevar.audiotales.data.online
+
+import io.github.drolevar.audiotales.BuildConfig
+import io.github.drolevar.audiotales.data.library.LibraryBook
+import io.github.drolevar.audiotales.data.library.LibraryAddition
+import io.github.drolevar.audiotales.data.library.LibraryRepository
+import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
+import io.github.drolevar.audiotales.data.local.LibraryDao
+import io.github.drolevar.audiotales.data.local.OnlineLibraryEntity
+import io.github.drolevar.audiotales.data.local.TrackEntity
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrl
+import org.jsoup.Jsoup
+
+enum class LibraryProtocol { PARTNER, LIBRIVOX }
+
+data class OnlineLibrary(val id: String, val baseUrl: String, val displayName: String, val protocol: LibraryProtocol)
+data class CatalogueBook(
+    val libraryId: String,
+    val remoteId: String,
+    val title: String,
+    val author: String?,
+    val description: String,
+    val coverUrl: String?,
+    val sourceUrl: String?,
+    val coverReferer: String? = null,
+)
+data class CataloguePage(val books: List<CatalogueBook>, val nextOffset: Int?)
+
+/** Library instances are persisted separately from the protocol used to communicate with them. */
+@Singleton
+internal class OnlineLibraries @Inject constructor(
+    private val dao: LibraryDao,
+    private val library: LibraryRepository,
+    private val http: ProviderHttpClient,
+) {
+    private val artworkRefreshMutex = Mutex()
+    // Rotate within this application process, including past permanently coverless records.
+    private var artworkRefreshCursor: String? = null
+
+    fun observeLibraries(): Flow<List<OnlineLibrary>> = dao.observeOnlineLibraries().map { rows ->
+        rows.map { it.toLibrary() }
+    }
+
+    suspend fun addLibrary(input: String): OnlineLibrary = withContext(Dispatchers.IO) {
+        val base = LibraryProtocolParser.baseUrl(input)
+        val id = LibraryProtocolParser.libraryId(base)
+        dao.getOnlineLibrary(id)?.let { return@withContext it.toLibrary() }
+        // LibriVox has a separate documented public protocol. Partner instances share one adapter.
+        val protocol = if (base.host == "librivox.org") LibraryProtocol.LIBRIVOX else LibraryProtocol.PARTNER
+        val candidate = OnlineLibrary(id, base.toString(), base.host, protocol)
+        // Persist only after a correctly shaped catalogue response, never HTTP success alone.
+        catalogue(candidate, "", 0)
+        dao.insertOnlineLibrary(OnlineLibraryEntity(id, base.toString(), base.host, protocol.name))
+        requireNotNull(dao.getOnlineLibrary(id)).toLibrary()
+    }
+
+    suspend fun browse(libraryId: String, query: String = "", offset: Int = 0): CataloguePage =
+        withContext(Dispatchers.IO) {
+            if (offset < 0 || query.length > 300) invalid()
+            catalogue(getLibrary(libraryId), query.trim(), offset)
+        }
+
+    suspend fun saveBook(libraryId: String, remoteId: String): LibraryAddition = withContext(Dispatchers.IO) {
+        val source = getLibrary(libraryId)
+        LibraryProtocolParser.requireId(remoteId)
+        resolveAndSave(source, remoteId)
+    }
+
+    private suspend fun resolveAndSave(source: OnlineLibrary, remoteId: String, expectedPage: String? = null): LibraryAddition {
+        val resolved = resolve(source, remoteId)
+        if (expectedPage != null && resolved.sourceUrl.trimEnd('/') != expectedPage.trimEnd('/')) unexpectedProtocol()
+        return library.addOnlineBook(resolved)
+    }
+
+    /** One metadata request; never renews tracks or fetches a playlist/audio body. */
+    suspend fun refreshBookArtwork(bookId: String): LibraryBook? = withContext(Dispatchers.IO) {
+        val book = library.getBook(bookId) ?: return@withContext null
+        val providerId = book.providerId ?: return@withContext null
+        val remoteId = book.providerBookId ?: return@withContext null
+        LibraryProtocolParser.requireId(remoteId)
+        val source = getLibrary(providerId)
+        val metadata = metadata(source, remoteId)
+        if (metadata.libraryId != providerId || metadata.remoteId != remoteId) unexpectedProtocol()
+        val cover = metadata.coverUrl ?: return@withContext book.takeIf { it.coverUrl != null }
+        // Match both stored identities so this cannot apply another recording's artwork.
+        if (dao.updateBookArtwork(bookId, providerId, remoteId, cover, metadata.coverReferer) != 1) unexpectedProtocol()
+        library.getBook(bookId)
+    }
+
+    /** One rotating, bounded snapshot per invocation. Failures do not starve later books. */
+    suspend fun refreshMissingArtwork(): Unit = withContext(Dispatchers.IO) {
+        artworkRefreshMutex.withLock {
+            val missing = dao.getBooksMissingArtwork(limit = 20, afterBookId = artworkRefreshCursor)
+            for (book in missing) {
+                currentCoroutineContext().ensureActive()
+                try {
+                    refreshBookArtwork(book.id)
+                } catch (_: OnlineBookException) {
+                    // Keep the placeholder, but advance so later records also get a turn.
+                }
+                currentCoroutineContext().ensureActive()
+                artworkRefreshCursor = book.id
+            }
+        }
+    }
+
+    /** Explicit online recovery. Cached playback does not call this method. */
+    suspend fun refreshBookSources(bookId: String): Unit = withContext(Dispatchers.IO) {
+        val book = library.getBook(bookId) ?: unexpectedProtocol()
+        val source = getLibrary(book.providerId ?: unexpectedProtocol())
+        val refreshed = resolve(source, book.providerBookId ?: unexpectedProtocol())
+        val stored = library.getTracks(bookId)
+        if (stored.isEmpty() || stored.size != refreshed.tracks.size ||
+            stored.map { it.providerTrackRef }.toSet() != refreshed.tracks.map { it.providerTrackRef }.toSet()
+        ) unexpectedProtocol()
+        dao.refreshTrackSources(bookId, refreshed.tracks.map { track ->
+            TrackEntity(track.id, bookId, track.title, track.uri, track.sequenceIndex, track.durationMs,
+                track.providerTrackRef, track.streamReferer, track.downloadReferer)
+        })
+    }
+
+    private suspend fun resolve(source: OnlineLibrary, remoteId: String): ResolvedOnlineBook = when (source.protocol) {
+        LibraryProtocol.PARTNER -> resolvePartner(source, remoteId)
+        LibraryProtocol.LIBRIVOX -> resolveLibrivox(source, remoteId)
+    }
+
+    suspend fun addBookLink(input: String): LibraryAddition = withContext(Dispatchers.IO) {
+        val url = LibraryProtocolParser.httpsUrl(input.trim())
+        if (url.query != null || url.fragment != null) invalid()
+        val base = url.newBuilder().encodedPath("/").build()
+        val source = addLibrary(base.toString())
+        val remoteId = if (source.protocol == LibraryProtocol.LIBRIVOX) {
+            val html = http.get(url, 1_048_576)
+            val document = Jsoup.parse(html, url.toString())
+            val rss = document.select("a[href]").mapNotNull { element ->
+                url.resolve(element.attr("href"))?.takeIf {
+                    it.host == base.host && Regex("/rss/[1-9][0-9]*/?").matches(it.encodedPath)
+                }
+            }.distinct().singleOrNull() ?: invalid()
+            rss.pathSegments.first { it.toLongOrNull() != null }
+        } else {
+            val match = Regex("/audio(?:/|-)([1-9][0-9]*)-[^/]+/?").matchEntire(url.encodedPath) ?: invalid()
+            match.groupValues[1]
+        }
+        resolveAndSave(source, remoteId, if (source.protocol == LibraryProtocol.LIBRIVOX) url.toString() else null)
+    }
+
+    private suspend fun getLibrary(id: String): OnlineLibrary =
+        dao.getOnlineLibrary(id)?.toLibrary() ?: throw OnlineBookException(OnlineBookError.UNSUPPORTED_LIBRARY)
+
+    private suspend fun catalogue(source: OnlineLibrary, query: String, offset: Int): CataloguePage {
+        val url = when (source.protocol) {
+            LibraryProtocol.PARTNER -> partnerUrl(source, if (query.isBlank()) "favorite" else "search")
+                .addQueryParameter("startid", offset.toString())
+                .apply { if (query.isNotBlank()) addQueryParameter("text", query) }.build()
+            LibraryProtocol.LIBRIVOX -> librivoxUrl(source).addQueryParameter("limit", "20")
+                .addQueryParameter("offset", offset.toString()).addQueryParameter("sort_order", "desc")
+                .apply { if (query.isNotBlank()) addQueryParameter("title", query) }.build()
+        }
+        val text = http.get(url, 2_097_152, acceptedStatuses = if (source.protocol == LibraryProtocol.LIBRIVOX) setOf(404) else emptySet())
+        val books = LibraryProtocolParser.catalogue(source, text)
+        // Partner has no total/cursor contract: a nonempty page permits one more user-driven request.
+        val more = books.isNotEmpty() && (source.protocol == LibraryProtocol.PARTNER || books.size == 20)
+        return CataloguePage(books, if (more) Math.addExact(offset, books.size) else null)
+    }
+
+    private suspend fun metadata(source: OnlineLibrary, id: String): CatalogueBook {
+        val book = when (source.protocol) {
+            LibraryProtocol.PARTNER -> {
+                val text = http.get(partnerUrl(source, "review").addQueryParameter("storyid", id).build(), 1_048_576)
+                LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(text))
+            }
+            LibraryProtocol.LIBRIVOX -> {
+                val text = http.get(librivoxUrl(source).addQueryParameter("id", id).build(), 1_048_576)
+                LibraryProtocolParser.librivoxMetadata(source, id, text)
+            }
+        }
+        if (book.libraryId != source.id || book.remoteId != id) unexpectedProtocol()
+        return book
+    }
+
+    private suspend fun resolvePartner(source: OnlineLibrary, id: String): ResolvedOnlineBook {
+        val book = metadata(source, id)
+        val story = http.get(partnerUrl(source, "story").addQueryParameter("storyid", id).build(), 1_048_576)
+        val playlistUrl = LibraryProtocolParser.httpsUrl(LibraryProtocolParser.objectValue(story).requiredText("file"))
+        val playlist = http.get(playlistUrl, 2_097_152, source.baseUrl)
+        return LibraryProtocolParser.partnerResolution(source, book, playlist)
+    }
+
+    private suspend fun resolveLibrivox(source: OnlineLibrary, id: String): ResolvedOnlineBook {
+        val text = http.get(librivoxUrl(source).addQueryParameter("id", id)
+            .addQueryParameter("extended", "1").build(), 3_145_728)
+        return LibraryProtocolParser.librivoxResolution(source, id, text)
+    }
+
+    private fun partnerUrl(source: OnlineLibrary, operation: String): HttpUrl.Builder {
+        val query = BuildConfig.PARTNER_CLIENT_QUERY
+        if (query.isBlank()) throw OnlineBookException(OnlineBookError.ACCESS_NOT_CONFIGURED)
+        // Configure the protocol's client parameter locally; never include it in source URLs or errors.
+        return source.baseUrl.toHttpUrl().resolve("api")!!.newBuilder()
+            .encodedQuery(query).addQueryParameter("func", operation)
+    }
+
+    private fun librivoxUrl(source: OnlineLibrary): HttpUrl.Builder = source.baseUrl.toHttpUrl()
+        .resolve("api/feed/audiobooks/")!!.newBuilder().addQueryParameter("format", "json")
+        .addQueryParameter("coverart", "1")
+
+    private fun OnlineLibraryEntity.toLibrary() = OnlineLibrary(id, baseUrl, displayName, LibraryProtocol.valueOf(protocol))
+    private fun invalid(): Nothing = throw OnlineBookException(OnlineBookError.INVALID_LINK)
+}

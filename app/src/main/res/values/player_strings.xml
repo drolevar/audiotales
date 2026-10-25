@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_title">Now playing</string>
+    <string name="player_listen">Listen</string>
+    <string name="player_connecting">Connecting to the player…</string>
+    <string name="player_connection_failed">The player could not be connected.</string>
+    <string name="player_book_unavailable">This book could not be opened.</string>
+    <plurals name="player_chapter_count">
+        <item quantity="one">%1$d track</item>
+        <item quantity="other">%1$d tracks</item>
+    </plurals>
+    <string name="player_playback_error">Playback stopped. Check your connection or download the book, then try again.</string>
+    <string name="player_source_refreshing">Refreshing audio sources…</string>
+    <string name="player_action_working">Updating the request…</string>
+    <string name="player_source_refresh_failed">Audio sources could not be refreshed. Check your connection and try again.</string>
+    <string name="player_retry_failed">Playback could not be restarted. Reconnect the player and try again.</string>
+    <plurals name="player_download_queued">
+        <item quantity="one">%1$d track queued</item>
+        <item quantity="other">%1$d tracks queued</item>
+    </plurals>
+    <plurals name="player_download_running">
+        <item quantity="one">Downloading %1$d track</item>
+        <item quantity="other">Downloading %1$d tracks</item>
+    </plurals>
+    <plurals name="player_download_paused">
+        <item quantity="one">%1$d track paused</item>
+        <item quantity="other">%1$d tracks paused</item>
+    </plurals>
+    <string name="player_position_error">Your listening position could not be saved.</string>
+    <string name="player_download">Download book</string>
+    <string name="player_retry_download">Retry downloads</string>
+    <string name="player_resume_download">Resume downloads</string>
+    <string name="player_pause_download">Pause downloads</string>
+    <string name="player_remove_download">Remove downloads</string>
+    <string name="player_download_ready">Available offline</string>
+    <string name="player_download_checking">Checking downloads…</string>
+    <plurals name="player_download_status">
+        <item quantity="one">%1$d of %2$d track saved</item>
+        <item quantity="other">%1$d of %2$d tracks saved</item>
+    </plurals>
+    <string name="player_download_failed">Some tracks could not be downloaded.</string>
+    <string name="player_download_removing">Removing downloaded audio…</string>
+    <string name="player_download_action_failed">The download request could not be completed. Please try again.</string>
+    <string name="player_streaming">Online audio</string>
+    <string name="player_open">Open player</string>
+    <string name="download_notification_channel">Audiobook downloads</string>
+    <string name="download_notification_title">Downloading audiobooks</string>
+    <string name="download_notification_running">Saving audio for offline listening</string>
+    <string name="download_notification_waiting">Waiting for a network connection</string>
+</resources>

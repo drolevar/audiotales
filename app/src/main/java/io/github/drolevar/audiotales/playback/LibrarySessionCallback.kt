@@ -2,6 +2,8 @@ package io.github.drolevar.audiotales.playback
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.C
+import android.os.Bundle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService.LibraryParams
@@ -24,6 +26,8 @@ internal class LibrarySessionCallback(
     private val library: LibraryRepository,
     private val scope: CoroutineScope,
     rootTitle: String,
+    private val storage: MediaStorage,
+    private val progress: PlaybackProgressRecorder,
 ) : MediaLibrarySession.Callback {
     private val resolver = PlaybackItemResolver(library)
     private val root = MediaItem.Builder()
@@ -124,6 +128,51 @@ internal class LibrarySessionCallback(
         resolver.resolve(requests).map { it.toMediaItem(includeLocation = true) }
     }
 
+    override fun onSetMediaItems(
+        mediaSession: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        mediaItems: List<MediaItem>,
+        startIndex: Int,
+        startPositionMs: Long,
+    ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
+        require(mediaItems.none { it.localConfiguration != null || it.requestMetadata.mediaUri != null })
+        progress.flushCurrent()
+        val bookId = mediaItems.singleOrNull()?.mediaId?.let(LibraryMediaIds::bookId)
+        if (bookId != null) {
+            val queue = resolver.resolveBook(bookId)
+            MediaSession.MediaItemsWithStartPosition(
+                queue.tracks.map { it.toMediaItem(includeLocation = true) },
+                queue.startIndex,
+                queue.startPositionMs,
+            )
+        } else {
+            val tracks = resolver.resolve(mediaItems.map { PlaybackRequest(it.mediaId, false) })
+            if (tracks.size == 1) {
+                val queue = resolver.resolveBook(tracks.single().bookId)
+                MediaSession.MediaItemsWithStartPosition(
+                    queue.tracks.map { it.toMediaItem(includeLocation = true) },
+                    queue.tracks.indexOfFirst { it.id == tracks.single().id },
+                    startPositionMs.takeUnless { it == C.TIME_UNSET } ?: 0,
+                )
+            } else {
+                MediaSession.MediaItemsWithStartPosition(
+                    tracks.map { it.toMediaItem(includeLocation = true) }, startIndex, startPositionMs,
+                )
+            }
+        }
+    }
+
+    override fun onSubscribe(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        parentId: String,
+        params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> = readLibrary(params) {
+        if (parentId == LibraryMediaIds.ROOT || LibraryMediaIds.bookId(parentId)?.let { library.getBook(it) } != null) {
+            LibraryResult.ofVoid(params)
+        } else LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+    }
+
     private fun <T : Any> readLibrary(
         params: LibraryParams? = null,
         block: suspend () -> LibraryResult<T>,
@@ -151,16 +200,24 @@ internal class LibrarySessionCallback(
         )
         .build()
 
-    private fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem = MediaItem.Builder()
+    private suspend fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem = MediaItem.Builder()
         .setMediaId(LibraryMediaIds.track(id))
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle(title)
+                .setAlbumTitle(library.getBook(bookId)?.title)
                 .setIsBrowsable(false)
                 .setIsPlayable(true)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
+                .setExtras(Bundle().apply { putString("bookId", bookId) })
                 .build(),
         )
-        .apply { if (includeLocation) setUri(uri) }
+        .apply {
+            if (includeLocation) {
+                storage.registerPlayback(this@toMediaItem)
+                setUri(uri)
+                setCustomCacheKey(id)
+            }
+        }
         .build()
 }

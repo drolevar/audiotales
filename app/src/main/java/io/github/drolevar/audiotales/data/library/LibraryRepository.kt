@@ -6,6 +6,11 @@ data class LibraryBook(
     val id: String,
     val title: String,
     val author: String? = null,
+    val providerId: String? = null,
+    val providerBookId: String? = null,
+    val sourceUrl: String? = null,
+    val coverUrl: String? = null,
+    val coverReferer: String? = null,
 )
 
 data class LibraryTrack(
@@ -15,6 +20,9 @@ data class LibraryTrack(
     val uri: String,
     val sequenceIndex: Int,
     val durationMs: Long? = null,
+    val providerTrackRef: String? = null,
+    val streamReferer: String? = null,
+    val downloadReferer: String? = null,
 )
 
 data class ListeningProgress(
@@ -26,9 +34,31 @@ data class ListeningProgress(
 
 interface LibraryRepository {
     fun observeBooks(): Flow<List<LibraryBook>>
+    fun observeCollection(): Flow<List<LibraryCollectionEntry>>
     suspend fun getBook(bookId: String): LibraryBook?
     suspend fun getTracks(bookId: String): List<LibraryTrack>
     suspend fun getTrack(trackId: String): LibraryTrack?
     suspend fun getProgress(bookId: String): ListeningProgress?
     suspend fun saveProgress(bookId: String, trackId: String, positionMs: Long)
+    suspend fun addOnlineBook(book: ResolvedOnlineBook): LibraryAddition
 }
+
+data class LibraryCollectionEntry(
+    val book: LibraryBook,
+    val tracks: List<LibraryTrack>,
+    val progress: ListeningProgress?,
+)
+
+data class ResolvedOnlineBook(
+    val id: String,
+    val providerId: String,
+    val providerBookId: String,
+    val sourceUrl: String,
+    val title: String,
+    val author: String?,
+    val tracks: List<LibraryTrack>,
+    val coverUrl: String? = null,
+    val coverReferer: String? = null,
+)
+
+data class LibraryAddition(val book: LibraryBook, val added: Boolean)

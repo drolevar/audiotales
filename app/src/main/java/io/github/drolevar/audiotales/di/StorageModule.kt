@@ -13,6 +13,7 @@ import io.github.drolevar.audiotales.data.library.LibraryRepository
 import io.github.drolevar.audiotales.data.library.RoomLibraryRepository
 import io.github.drolevar.audiotales.data.local.AudioTalesDatabase
 import io.github.drolevar.audiotales.data.local.LibraryDao
+import io.github.drolevar.audiotales.data.local.LibraryMigrations
 import javax.inject.Singleton
 
 @Module
@@ -23,6 +24,7 @@ object StorageModule {
     fun provideDatabase(@ApplicationContext context: Context): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, "audiotales.db")
             .setDriver(AndroidSQLiteDriver())
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4)
             .build()
 
     @Provides

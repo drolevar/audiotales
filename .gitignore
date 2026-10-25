@@ -25,3 +25,11 @@ render.experimental.xml
 keystore.properties
 google-services.json
 *.hprof
+
+# Local service credentials; examples must contain placeholders only
+.env
+.env.*
+!.env.example
+!.env.*.example
+/credentials.json
+/secrets/

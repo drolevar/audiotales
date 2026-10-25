@@ -9,8 +9,9 @@ import androidx.room3.RoomDatabase
         TrackEntity::class,
         PlaybackProgressEntity::class,
         BookmarkEntity::class,
+        OnlineLibraryEntity::class,
     ],
-    version = 1,
+    version = 4,
     exportSchema = true,
 )
 abstract class AudioTalesDatabase : RoomDatabase() {

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_loading">Checking downloads…</string>
+    <string name="downloads_empty_title">Listen anywhere</string>
+    <string name="downloads_empty_description">No downloads yet. Download a book from the player to listen offline.</string>
+    <string name="downloads_my_books">Go to My books</string>
+    <string name="downloads_load_failed">Downloads could not be loaded. Please try again.</string>
+    <string name="downloads_request_failed">The download request could not be completed. Please try again.</string>
+    <string name="downloads_sources_failed">Audio sources could not be refreshed. Check your connection and try again.</string>
+    <string name="downloads_offline">Available offline</string>
+    <string name="downloads_downloading">Downloading</string>
+    <string name="downloads_queued">Queued</string>
+    <string name="downloads_paused">Paused</string>
+    <string name="downloads_failed">Download failed</string>
+    <string name="downloads_removing">Removing downloads…</string>
+    <string name="downloads_partial">Partly downloaded</string>
+    <string name="downloads_not_downloaded">Not downloaded</string>
+    <string name="downloads_percent">%1$s · %2$d%%</string>
+    <string name="downloads_failed_count">%1$d failed</string>
+    <string name="downloads_status_failures">%1$s · %2$s</string>
+    <plurals name="downloads_tracks_saved">
+        <item quantity="one">%1$d of %2$d track saved</item>
+        <item quantity="other">%1$d of %2$d tracks saved</item>
+    </plurals>
+    <string name="downloads_play">Play downloaded book</string>
+    <string name="downloads_pause">Pause downloads</string>
+    <string name="downloads_resume">Resume downloads</string>
+    <string name="downloads_retry">Retry downloads</string>
+    <string name="downloads_working">Updating downloads…</string>
+    <string name="downloads_options">Download options for %1$s</string>
+    <string name="downloads_details">Download details</string>
+    <string name="downloads_remove">Remove downloads</string>
+    <string name="downloads_remove_title">Remove downloaded audio?</string>
+    <string name="downloads_remove_message">Remove downloaded audio for “%1$s”? The book and your listening history stay in My books.</string>
+    <string name="downloads_cancel">Cancel</string>
+    <string name="downloads_close">Close</string>
+    <string name="downloads_track_bytes">%1$s of %2$s</string>
+    <string name="downloads_track_saved_bytes">%1$s downloaded · total size unknown</string>
+    <string name="downloads_reconnect">Reconnect player</string>
+    <string name="downloads_connection_failed">The player could not be connected.</string>
+</resources>
