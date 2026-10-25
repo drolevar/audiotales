@@ -267,6 +267,18 @@ On API 37.2, selecting a previously unselected library while offline produced th
 
 Both platform runs preserved the fixture's four books, 54 tracks, four progress records, zero bookmarks, three source records and hashes of all 12 downloaded-audio files. The original selection was restored before comparison. Both task emulators were stopped after testing; no build ran alongside an emulator. Broader platform and accessibility coverage remains open, and player layout remains on hold.
 
+### My books search action and collection accessibility — 2026-10-25
+
+The My books app bar now follows Figma node `34:1126` with a native search icon labelled “Browse books.” It selects the existing Browse tab and replaces the scaffold's Settings shortcut. The approved navigation bar and player layout are unchanged. Independent review found no actionable issues; `assembleDebug`, `lintDebug` and all 79 JVM tests passed in **1m 5s**, with zero lint errors, nine existing warnings and one hint.
+
+On API 37.2, switching through this action retained the submitted Browse query and the saved collection's Downloaded filter and Title sort. TalkBack's displayed speech identified “Browse books” as a button, and native double-tap opened Browse with that query intact. Native TalkBack gestures also selected the Light radio option, announced and toggled the device-color switch, and opened About and returned with Back. These checks used actual accessibility focus and touchscreen gestures; no audible-output claim is made.
+
+API 26 also opened Browse through the new action and retained the collection's Downloaded filter and Title sort on return. With Use device setting selected, changing Android's night configuration switched the app between dark and light while retaining that selection; the system reported UI modes `0x21` and `0x11` respectively. The API 26 image has no installed TalkBack service: its accessibility evidence is the exposed hierarchy and reachable controls, whereas the TalkBack interaction checks ran on API 37.2.
+
+At 200% text in short landscape windows, both API 26 and API 37.2 allowed scrolling to all four saved-book action targets and the Settings controls. The final partially exposed row was scrolled fully into view before its action was accepted as reachable; its menu opened on API 26. Settings retained access to theme choices, Downloads and About, with device colors present only on the newer platform. API 26 also displayed the complete, wrapping About heading in narrow portrait. Both platform fixture comparisons retained all four books, 54 tracks, four progress records, zero bookmarks, three source records and the hashes of all 12 downloaded-audio files.
+
+Player layout remains on hold. Full Figma parity, remaining non-player error and accessibility workflows, playback, Android Auto and physical-device qualification are not established by these checks.
+
 ## Release preparation
 
 Release signing is not configured. Keep signing keys and credentials outside the repository. Preserve each release's version, Git commit, and R8 mappings for diagnostics. Distribution channels, release automation, and a public repository transition remain separate decisions.

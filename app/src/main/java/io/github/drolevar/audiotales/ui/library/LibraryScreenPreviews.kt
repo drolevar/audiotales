@@ -93,6 +93,6 @@ fun LibraryLargeTextPreview() {
 @Composable
 private fun LibraryPreview(state: LibraryUiState, darkTheme: Boolean = false) {
     AudioTalesTheme(darkTheme = darkTheme, dynamicColor = false) {
-        LibraryScreen(state = state, onRetry = {}, onSettings = {})
+        LibraryScreen(state = state, onRetry = {}, onBrowse = {})
     }
 }

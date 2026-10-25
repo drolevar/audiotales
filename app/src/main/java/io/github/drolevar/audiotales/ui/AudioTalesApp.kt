@@ -154,7 +154,7 @@ fun AudioTalesApp(
                                             0 -> LibraryScreen(
                                                 state = state,
                                                 onRetry = viewModel::retry,
-                                                onSettings = { selectedTab = 2 },
+                                                onBrowse = { selectedTab = 1 },
                                                 onOpenBook = openBook,
                                                 onBookDetails = { navigate(BookDetailsDestination(bookId = it)) },
                                                 onOpenDownloads = { navigate(DownloadsDestination) },

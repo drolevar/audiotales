@@ -37,7 +37,7 @@ import io.github.drolevar.audiotales.R
 fun LibraryScreen(
     state: LibraryUiState,
     onRetry: () -> Unit,
-    onSettings: () -> Unit,
+    onBrowse: () -> Unit,
     modifier: Modifier = Modifier,
     onOpenBook: (String) -> Unit = {},
     onBookDetails: (String) -> Unit = {},
@@ -54,10 +54,10 @@ fun LibraryScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.my_books)) },
                 actions = {
-                    IconButton(onClick = onSettings) {
+                    IconButton(onClick = onBrowse) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_settings),
-                            contentDescription = stringResource(R.string.settings),
+                            painter = painterResource(R.drawable.ic_catalogue_search),
+                            contentDescription = stringResource(R.string.collection_browse_books),
                         )
                     }
                 },
