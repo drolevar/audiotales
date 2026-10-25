@@ -253,7 +253,19 @@ The four-book fixture opened on both versions with real covers and two completed
 
 After each platform run, database comparisons preserved all four books, 54 tracks, four progress records, zero bookmarks and three sources. All 12 downloaded-audio files retained their hashes and total 57,972,201 bytes. Both task emulators were stopped after testing.
 
-These checks do not establish the full error-state matrix, TalkBack coverage for other screens or transfer states, physical-device behavior, audio output, Android Auto, or full Figma parity. The API 26 keyboard check was obscured by Gboard's first-run tip and is not counted as verified. The remaining input-dialog and constrained-window matrix stays open. Player layout remains on hold at the user's request, and the sleep timer remains unfinished.
+These checks do not establish the full error-state matrix, TalkBack coverage for other screens or transfer states, physical-device behavior, audio output, Android Auto, or full Figma parity. At this stage, the API 26 keyboard check was obscured by Gboard's first-run tip and was not counted as verified. The remaining input-dialog and constrained-window matrix stays open. Player layout remains on hold at the user's request, and the sleep timer remains unfinished.
+
+### Browse system-bar correction — 2026-10-25
+
+On API 26 in landscape, Browse's custom search header placed its overflow action behind the system navigation buttons; the library chooser also clipped its Done action. The header now uses `TopAppBarDefaults.windowInsets`, and the chooser passes `WindowInsets.safeDrawing` through the native sheet's `contentWindowInsets` parameter. This follows [Material's inset handling](https://developer.android.com/develop/ui/compose/system/material-insets) while retaining the existing search, navigation and player layouts.
+
+Independent review found no actionable issues. The JDK 21 build, lint and all 79 JVM tests passed in **1m 13s**, with zero lint errors, nine existing warnings and one hint. API 26 and API 37.2 emulator checks at 200% text verified landscape overflow activation, single-library Back/search headers, and the scrollable chooser with its reachable Done action. Portrait checks included opening the chooser from the active keyboard on API 26 and normal-size catalogue results on API 37.2. These are bounded UI checks, not full accessibility or platform acceptance.
+
+After dismissing Gboard's first-run tip on API 26, the short landscape rename field remained visible above the keyboard, and the keyboard's Done action saved a changed name. The original name was restored. Invalid library input showed a scrollable validation message. The input driver initially left a suffix when moving the cursor; clearing both sides of the cursor corrected the test, and the final database comparison confirmed that the original source records were preserved.
+
+On API 37.2, selecting a previously unselected library while offline produced that source's connection error and Try again action while retaining the already loaded source's 20 results. Restoring connectivity and using Try again loaded 20 results for the failed source; the earlier source's results remained visible. This verifies one real partial-outage path, not the complete error matrix.
+
+Both platform runs preserved the fixture's four books, 54 tracks, four progress records, zero bookmarks, three source records and hashes of all 12 downloaded-audio files. The original selection was restored before comparison. Both task emulators were stopped after testing; no build ran alongside an emulator. Broader platform and accessibility coverage remains open, and player layout remains on hold.
 
 ## Release preparation
 

@@ -60,7 +60,7 @@ internal fun CatalogueScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            Column(Modifier.statusBarsPadding()) {
+            Column(Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets)) {
                 if (onBack != null) {
                     TopAppBar(
                         title = { Text(state.libraries.firstOrNull { it.id == state.singleLibraryId }?.displayName ?: stringResource(R.string.catalogue_browse), maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -158,6 +158,7 @@ internal fun CatalogueScreen(
     }
     if (choosingLibraries) ModalBottomSheet(
         onDismissRequest = { choosingLibraries = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        contentWindowInsets = { WindowInsets.safeDrawing },
     ) {
         Text(stringResource(R.string.catalogue_choose_libraries), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() })
         LazyColumn(Modifier.weight(1f, fill = false)) {
