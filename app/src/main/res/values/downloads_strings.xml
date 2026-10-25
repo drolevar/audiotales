@@ -3,7 +3,7 @@
     <string name="downloads_title">Downloads</string>
     <string name="downloads_loading">Checking downloads…</string>
     <string name="downloads_empty_title">Listen anywhere</string>
-    <string name="downloads_empty_description">No downloads yet. Download a book from the player to listen offline.</string>
+    <string name="downloads_empty_description">No downloads yet. Choose a book in My books, then use its Download action to listen offline.</string>
     <string name="downloads_my_books">Go to My books</string>
     <string name="downloads_load_failed">Downloads could not be loaded. Please try again.</string>
     <string name="downloads_request_failed">The download request could not be completed. Please try again.</string>
@@ -23,11 +23,12 @@
         <item quantity="one">%1$d of %2$d track saved</item>
         <item quantity="other">%1$d of %2$d tracks saved</item>
     </plurals>
-    <string name="downloads_play">Play downloaded book</string>
-    <string name="downloads_pause">Pause downloads</string>
-    <string name="downloads_resume">Resume downloads</string>
-    <string name="downloads_retry">Retry downloads</string>
-    <string name="downloads_working">Updating downloads…</string>
+    <string name="downloads_play">Play downloaded book: %1$s</string>
+    <string name="downloads_pause">Pause downloads for %1$s</string>
+    <string name="downloads_resume">Resume downloads for %1$s</string>
+    <string name="downloads_retry">Retry downloads for %1$s</string>
+    <string name="downloads_working">Updating downloads for %1$s…</string>
+    <string name="downloads_removing_book">Removing downloads for %1$s…</string>
     <string name="downloads_options">Download options for %1$s</string>
     <string name="downloads_details">Download details</string>
     <string name="downloads_remove">Remove downloads</string>

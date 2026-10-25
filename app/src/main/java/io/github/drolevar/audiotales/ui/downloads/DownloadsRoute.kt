@@ -246,7 +246,7 @@ private fun DownloadRow(
 ) {
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     val complete = item.status == DownloadBookStatus.COMPLETE
-    val workingLabel = stringResource(R.string.downloads_working)
+    val workingLabel = stringResource(R.string.downloads_working, item.entry.book.title)
     Row(
         modifier = modifier.heightIn(min = 112.dp).padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -307,10 +307,10 @@ private fun DownloadRow(
                         DownloadBookStatus.COMPLETE -> R.string.downloads_play
                         DownloadBookStatus.DOWNLOADING, DownloadBookStatus.QUEUED -> R.string.downloads_pause
                         DownloadBookStatus.FAILED -> R.string.downloads_retry
-                        DownloadBookStatus.REMOVING -> R.string.downloads_removing
+                        DownloadBookStatus.REMOVING -> R.string.downloads_removing_book
                         else -> R.string.downloads_resume
                     }
-                    Icon(painterResource(icon), stringResource(label))
+                    Icon(painterResource(icon), stringResource(label, item.entry.book.title))
                 }
             }
             Box {

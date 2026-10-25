@@ -201,7 +201,7 @@ Two lint exceptions are scoped in the manifest and must remain deliberate: the e
 
 Before calling the player ready for listeners, also perform:
 
-- API 26 and current-platform launch, navigation, theme, and process recreation checks.
+- Broader API 26/current-platform error recovery and accessibility workflows; the bounded non-player checks below do not qualify playback.
 - Storage permission loss and file movement recovery checks.
 - Playback interruptions, headphone disconnection, service lifetime, and durable resume checks.
 - Android Auto/DHU browsing, media controls, and real playback checks.
@@ -240,6 +240,20 @@ The final JDK 21 `assembleDebug`, `lintDebug` and `testDebugUnitTest` run passed
 - After cancellation and renaming back, all four book rows, 54 tracks, four progress rows, the empty bookmark table and three source records matched the input fixture exactly. All 12 downloaded audio files, totalling 57,972,201 bytes, retained identical hashes.
 
 The audit also inspected the existing 320 × 600 dp large-text surfaces. API 26/current-platform qualification, TalkBack, the complete empty/error-state matrix and the full six-screen audit are still outstanding. Player layout remains on hold at the user's request; the sleep timer remains unfinished. No player code changed in this correction.
+
+### Non-player platform and accessibility checks — 2026-10-25
+
+Downloads now includes the book title in its primary action and busy-state accessibility descriptions. Its empty-state guidance matches the existing My books destination. The independent review found no actionable issues. No player layout, playback, database or navigation behavior changed.
+
+The debug build, Android lint and all 79 JVM tests passed using JDK 21, one Gradle worker and a 1536 MiB heap. Lint reported zero errors, nine existing warnings and one hint. Builds and emulators ran sequentially.
+
+Two Google APIs x86_64 images were exercised: API 26 revision 16 and API 37.2 revision 6. The latter reported `sdk_full=37.2` and a 16384-byte memory page size. Both opened the empty My books, Browse, Manage libraries and Downloads screens, returned from Downloads to My books, retained Dark mode after a forced restart, and restored the About destination after the Activity was stopped with saved state and its process was killed. About remained scrollable through the license and copyright text with 200% font scaling and a requested 600 × 320 dp landscape window. Wallpaper colors were absent on API 26; on API 37.2 their disabled preference survived restart, and Use device setting followed system light/dark changes.
+
+The four-book fixture opened on both versions with real covers and two completed downloads. API 26 also opened Manage libraries and Walden details. The Downloads accessibility hierarchy identified both books' Play actions on both versions. On API 37.2, TalkBack linear navigation and its displayed speech output confirmed the book rows, both title-specific Play buttons, and download options; TalkBack activation opened and closed the download-details dialog, returning focus to the originating options button. The check used native emulator touch events because ordinary injected swipe commands did not advance TalkBack focus. See [Android's accessibility testing guidance](https://developer.android.com/guide/topics/ui/accessibility/testing).
+
+After each platform run, database comparisons preserved all four books, 54 tracks, four progress records, zero bookmarks and three sources. All 12 downloaded-audio files retained their hashes and total 57,972,201 bytes. Both task emulators were stopped after testing.
+
+These checks do not establish the full error-state matrix, TalkBack coverage for other screens or transfer states, physical-device behavior, audio output, Android Auto, or full Figma parity. The API 26 keyboard check was obscured by Gboard's first-run tip and is not counted as verified. The remaining input-dialog and constrained-window matrix stays open. Player layout remains on hold at the user's request, and the sleep timer remains unfinished.
 
 ## Release preparation
 
