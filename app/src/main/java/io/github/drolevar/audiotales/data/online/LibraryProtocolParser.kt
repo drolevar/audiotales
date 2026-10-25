@@ -152,7 +152,8 @@ internal object LibraryProtocolParser {
         return CatalogueBook(source.id, requireId(item.requiredText("id")), title(item.requiredText("title")),
             author?.let { clean(it, 1000) }, clean(item.text("description").orEmpty(), 100_000),
             item.text("coverart_jpg")?.let(::optionalImage)
-                ?: item.text("coverart_thumbnail")?.let(::optionalImage), page?.toString())
+                ?: item.text("coverart_thumbnail")?.let(::optionalImage), page?.toString(),
+            language = item.text("language")?.let { clean(it, 1000) }?.takeIf { it.isNotBlank() })
     }
 
     fun objectValue(text: String): JsonObject = parse(text) as? JsonObject ?: unexpectedProtocol()

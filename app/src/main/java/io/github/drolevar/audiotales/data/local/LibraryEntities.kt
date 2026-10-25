@@ -1,5 +1,6 @@
 package io.github.drolevar.audiotales.data.local
 
+import androidx.room3.ColumnInfo
 import androidx.room3.Entity
 import androidx.room3.ForeignKey
 import androidx.room3.Index
@@ -88,4 +89,6 @@ data class OnlineLibraryEntity(
     val baseUrl: String,
     val displayName: String,
     val protocol: String,
+    @ColumnInfo(defaultValue = "1") val isRegistered: Boolean = true,
+    @ColumnInfo(defaultValue = "1") val isSelected: Boolean = true,
 )

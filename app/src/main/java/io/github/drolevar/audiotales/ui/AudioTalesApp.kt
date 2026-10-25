@@ -1,6 +1,8 @@
 package io.github.drolevar.audiotales.ui
 
 import android.os.Build
+import android.content.Intent
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,9 @@ import io.github.drolevar.audiotales.ui.catalogue.AddLibraryDialog
 import io.github.drolevar.audiotales.ui.catalogue.CatalogueDetailsDialog
 import io.github.drolevar.audiotales.ui.catalogue.CatalogueScreen
 import io.github.drolevar.audiotales.ui.catalogue.CatalogueViewModel
+import io.github.drolevar.audiotales.ui.catalogue.CatalogueUiState
+import io.github.drolevar.audiotales.ui.catalogue.ManageLibrariesScreen
+import io.github.drolevar.audiotales.ui.catalogue.LibraryManagementDialogs
 import io.github.drolevar.audiotales.ui.downloads.DownloadsRoute
 import io.github.drolevar.audiotales.ui.library.LibraryScreen
 import io.github.drolevar.audiotales.ui.library.LibraryUiState
@@ -54,6 +59,12 @@ private data class PlayerDestination(val bookId: String) : NavKey
 
 @Serializable
 private data object DownloadsDestination : NavKey
+
+@Serializable
+private data object ManageLibrariesDestination : NavKey
+
+@Serializable
+private data class BrowseLibraryDestination(val libraryId: String) : NavKey
 
 @Serializable
 private data object AboutDestination : NavKey
@@ -147,16 +158,16 @@ fun AudioTalesApp(
                                                 onRemoveDownloads = viewModel::removeDownloads,
                                                 onDismissActionError = viewModel::dismissActionError,
                                             )
-                                            1 -> CatalogueScreen(
-                                                state = catalogueState,
-                                                onQueryChanged = catalogue::setQuery,
-                                                onSearch = catalogue::browse,
-                                                onLibrarySelected = catalogue::selectLibrary,
-                                                onAddLibrary = catalogue::openAddLibrary,
-                                                onRetryLibraries = catalogue::observeLibraries,
-                                                onLoadMore = catalogue::loadMore,
-                                                onInspect = catalogue::inspect,
-                                            )
+                                            1 -> {
+                                                LifecycleStartEffect(catalogue) {
+                                                    catalogue.activate()
+                                                    onStopOrDispose { catalogue.deactivate() }
+                                                }
+                                                CatalogueBrowseContent(
+                                                    catalogue, catalogueState,
+                                                    onManage = { navigate(ManageLibrariesDestination) },
+                                                )
+                                            }
                                             else -> SettingsScreen(
                                                 themeMode = themeMode,
                                                 dynamicColor = dynamicColor,
@@ -195,6 +206,58 @@ fun AudioTalesApp(
                             )
                         }
                     }
+                    entry<ManageLibrariesDestination> {
+                        val catalogue: CatalogueViewModel = hiltViewModel()
+                        val state by catalogue.state.collectAsStateWithLifecycle()
+                        val libraryViewModel: LibraryViewModel = hiltViewModel()
+                        val libraryState by libraryViewModel.state.collectAsStateWithLifecycle()
+                        val context = LocalContext.current
+                        Column(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) {
+                                ManageLibrariesScreen(
+                                    state = state, onBack = goBack, onAdd = catalogue::openAddLibrary,
+                                    onSelected = catalogue::setLibrarySelected,
+                                    onBrowse = { navigate(BrowseLibraryDestination(it)) },
+                                    onRename = catalogue::rename, onRemove = catalogue::remove,
+                                    onShare = { library ->
+                                        context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_TEXT, library.baseUrl)
+                                        }, null))
+                                    },
+                                    onRetry = catalogue::observeLibraries,
+                                )
+                            }
+                            MiniPlayerBar(
+                                connection = playbackConnection,
+                                onOpenBook = { navigate(PlayerDestination(it)) },
+                                books = (libraryState as? LibraryUiState.Content)?.books.orEmpty(),
+                            )
+                        }
+                        CatalogueDialogs(catalogue, state, { navigate(PlayerDestination(it)) })
+                        LibraryManagementDialogs(state, catalogue::setLibraryName, catalogue::confirmRename, catalogue::confirmRemove, catalogue::dismissLibraryAction)
+                    }
+                    entry<BrowseLibraryDestination> { destination ->
+                        val catalogue: CatalogueViewModel = hiltViewModel()
+                        val state by catalogue.state.collectAsStateWithLifecycle()
+                        val libraryViewModel: LibraryViewModel = hiltViewModel()
+                        val libraryState by libraryViewModel.state.collectAsStateWithLifecycle()
+                        LifecycleStartEffect(catalogue, destination.libraryId) {
+                            catalogue.activate(destination.libraryId)
+                            onStopOrDispose { catalogue.deactivate() }
+                        }
+                        Column(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) {
+                                CatalogueBrowseContent(catalogue, state, onManage = goBack, onBack = goBack)
+                            }
+                            MiniPlayerBar(
+                                connection = playbackConnection,
+                                onOpenBook = { navigate(PlayerDestination(it)) },
+                                books = (libraryState as? LibraryUiState.Content)?.books.orEmpty(),
+                            )
+                        }
+                        CatalogueDialogs(catalogue, state, { navigate(PlayerDestination(it)) })
+                    }
                     entry<PlayerDestination> { destination ->
                         BookPlayerRoute(
                             bookId = destination.bookId,
@@ -218,4 +281,35 @@ fun AudioTalesApp(
             )
         }
     }
+}
+
+@Composable
+private fun CatalogueBrowseContent(
+    catalogue: CatalogueViewModel,
+    state: CatalogueUiState,
+    onManage: () -> Unit,
+    onBack: (() -> Unit)? = null,
+) {
+    CatalogueScreen(
+        state = state,
+        onQueryChanged = catalogue::setQuery,
+        onSearch = catalogue::browse,
+        onLibrarySelected = catalogue::setLibrarySelected,
+        onManageLibraries = onManage,
+        onRetryLibraries = catalogue::observeLibraries,
+        onRetrySource = catalogue::retrySource,
+        onLoadMore = catalogue::loadMore,
+        onSort = catalogue::selectSort,
+        onLanguage = catalogue::selectLanguage,
+        onInspect = catalogue::inspect,
+        onBack = onBack,
+    )
+}
+
+@Composable
+private fun CatalogueDialogs(catalogue: CatalogueViewModel, state: CatalogueUiState, onOpenBook: (String) -> Unit) {
+    state.addLibrary?.let { input ->
+        AddLibraryDialog(input, catalogue::setLibraryUrl, catalogue::addLibrary, catalogue::dismissAddLibrary)
+    }
+    if (state.details != null) CatalogueDetailsDialog(state, catalogue::saveBook, onOpenBook, catalogue::dismissDetails)
 }

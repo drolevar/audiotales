@@ -24,7 +24,13 @@ import org.jsoup.Jsoup
 
 enum class LibraryProtocol { PARTNER, LIBRIVOX }
 
-data class OnlineLibrary(val id: String, val baseUrl: String, val displayName: String, val protocol: LibraryProtocol)
+data class OnlineLibrary(
+    val id: String,
+    val baseUrl: String,
+    val displayName: String,
+    val protocol: LibraryProtocol,
+    val isSelected: Boolean = true,
+)
 data class CatalogueBook(
     val libraryId: String,
     val remoteId: String,
@@ -34,6 +40,7 @@ data class CatalogueBook(
     val coverUrl: String?,
     val sourceUrl: String?,
     val coverReferer: String? = null,
+    val language: String? = null,
 )
 data class CataloguePage(val books: List<CatalogueBook>, val nextOffset: Int?)
 
@@ -43,38 +50,54 @@ internal class OnlineLibraries @Inject constructor(
     private val dao: LibraryDao,
     private val library: LibraryRepository,
     private val http: ProviderHttpClient,
-) {
+) : OnlineCatalogue {
     private val artworkRefreshMutex = Mutex()
     // Rotate within this application process, including past permanently coverless records.
     private var artworkRefreshCursor: String? = null
 
-    fun observeLibraries(): Flow<List<OnlineLibrary>> = dao.observeOnlineLibraries().map { rows ->
+    override fun observeLibraries(): Flow<List<OnlineLibrary>> = dao.observeOnlineLibraries().map { rows ->
         rows.map { it.toLibrary() }
     }
 
-    suspend fun addLibrary(input: String): OnlineLibrary = withContext(Dispatchers.IO) {
+    override suspend fun addLibrary(input: String): OnlineLibrary = withContext(Dispatchers.IO) {
         val base = LibraryProtocolParser.baseUrl(input)
         val id = LibraryProtocolParser.libraryId(base)
-        dao.getOnlineLibrary(id)?.let { return@withContext it.toLibrary() }
+        dao.getOnlineLibraryByBaseUrl(base.toString())?.let {
+            return@withContext dao.registerOnlineLibrary(it).toLibrary()
+        }
         // LibriVox has a separate documented public protocol. Partner instances share one adapter.
         val protocol = if (base.host == "librivox.org") LibraryProtocol.LIBRIVOX else LibraryProtocol.PARTNER
         val candidate = OnlineLibrary(id, base.toString(), base.host, protocol)
         // Persist only after a correctly shaped catalogue response, never HTTP success alone.
         catalogue(candidate, "", 0)
-        dao.insertOnlineLibrary(OnlineLibraryEntity(id, base.toString(), base.host, protocol.name))
-        requireNotNull(dao.getOnlineLibrary(id)).toLibrary()
+        dao.registerOnlineLibrary(OnlineLibraryEntity(id, base.toString(), base.host, protocol.name)).toLibrary()
     }
 
-    suspend fun browse(libraryId: String, query: String = "", offset: Int = 0): CataloguePage =
+    override suspend fun browse(libraryId: String, query: String, offset: Int): CataloguePage =
         withContext(Dispatchers.IO) {
             if (offset < 0 || query.length > 300) invalid()
             catalogue(getLibrary(libraryId), query.trim(), offset)
         }
 
-    suspend fun saveBook(libraryId: String, remoteId: String): LibraryAddition = withContext(Dispatchers.IO) {
+    override suspend fun saveBook(libraryId: String, remoteId: String): LibraryAddition = withContext(Dispatchers.IO) {
         val source = getLibrary(libraryId)
         LibraryProtocolParser.requireId(remoteId)
         resolveAndSave(source, remoteId)
+    }
+
+    override suspend fun setLibrarySelected(id: String, selected: Boolean): Unit = withContext(Dispatchers.IO) {
+        if (dao.setOnlineLibrarySelected(id, selected) != 1) unsupportedLibrary()
+    }
+
+    override suspend fun renameLibrary(id: String, name: String): Unit = withContext(Dispatchers.IO) {
+        val trimmed = name.trim()
+        require(trimmed.isNotEmpty() && trimmed.length <= 100) { "Library name must contain 1 to 100 characters" }
+        if (dao.renameOnlineLibrary(id, trimmed) != 1) unsupportedLibrary()
+    }
+
+    override suspend fun removeLibrary(id: String): Unit = withContext(Dispatchers.IO) {
+        dao.removeOnlineLibrary(id)
+        Unit
     }
 
     private suspend fun resolveAndSave(source: OnlineLibrary, remoteId: String, expectedPage: String? = null): LibraryAddition {
@@ -157,9 +180,21 @@ internal class OnlineLibraries @Inject constructor(
     }
 
     private suspend fun getLibrary(id: String): OnlineLibrary =
-        dao.getOnlineLibrary(id)?.toLibrary() ?: throw OnlineBookException(OnlineBookError.UNSUPPORTED_LIBRARY)
+        dao.getOnlineLibrary(id)?.toLibrary() ?: unsupportedLibrary()
 
     private suspend fun catalogue(source: OnlineLibrary, query: String, offset: Int): CataloguePage {
+        if (source.protocol == LibraryProtocol.LIBRIVOX && query.isNotBlank()) {
+            // Separate searches are required: combining title and author filters would intersect them.
+            suspend fun search(field: String): List<CatalogueBook> = catalogueBooks(source,
+                librivoxUrl(source).addQueryParameter("limit", "20")
+                    .addQueryParameter("offset", offset.toString()).addQueryParameter("sort_order", "desc")
+                    .addQueryParameter(field, query).build())
+            val titles = search("title")
+            val authors = search("author")
+            val more = titles.size == 20 || authors.size == 20
+            return CataloguePage((titles + authors).distinctBy { it.remoteId },
+                if (more) Math.addExact(offset, 20) else null)
+        }
         val url = when (source.protocol) {
             LibraryProtocol.PARTNER -> partnerUrl(source, if (query.isBlank()) "favorite" else "search")
                 .addQueryParameter("startid", offset.toString())
@@ -168,11 +203,16 @@ internal class OnlineLibraries @Inject constructor(
                 .addQueryParameter("offset", offset.toString()).addQueryParameter("sort_order", "desc")
                 .apply { if (query.isNotBlank()) addQueryParameter("title", query) }.build()
         }
-        val text = http.get(url, 2_097_152, acceptedStatuses = if (source.protocol == LibraryProtocol.LIBRIVOX) setOf(404) else emptySet())
-        val books = LibraryProtocolParser.catalogue(source, text)
+        val books = catalogueBooks(source, url)
         // Partner has no total/cursor contract: a nonempty page permits one more user-driven request.
         val more = books.isNotEmpty() && (source.protocol == LibraryProtocol.PARTNER || books.size == 20)
         return CataloguePage(books, if (more) Math.addExact(offset, books.size) else null)
+    }
+
+    private suspend fun catalogueBooks(source: OnlineLibrary, url: HttpUrl): List<CatalogueBook> {
+        val text = http.get(url, 2_097_152,
+            acceptedStatuses = if (source.protocol == LibraryProtocol.LIBRIVOX) setOf(404) else emptySet())
+        return LibraryProtocolParser.catalogue(source, text)
     }
 
     private suspend fun metadata(source: OnlineLibrary, id: String): CatalogueBook {
@@ -216,6 +256,7 @@ internal class OnlineLibraries @Inject constructor(
         .resolve("api/feed/audiobooks/")!!.newBuilder().addQueryParameter("format", "json")
         .addQueryParameter("coverart", "1")
 
-    private fun OnlineLibraryEntity.toLibrary() = OnlineLibrary(id, baseUrl, displayName, LibraryProtocol.valueOf(protocol))
+    private fun OnlineLibraryEntity.toLibrary() = OnlineLibrary(id, baseUrl, displayName, LibraryProtocol.valueOf(protocol), isSelected)
+    private fun unsupportedLibrary(): Nothing = throw OnlineBookException(OnlineBookError.UNSUPPORTED_LIBRARY)
     private fun invalid(): Nothing = throw OnlineBookException(OnlineBookError.INVALID_LINK)
 }

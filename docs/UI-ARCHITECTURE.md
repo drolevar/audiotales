@@ -2,7 +2,7 @@
 
 Prepared on 2026-10-25 from the current source, accepted decisions, the two Figma references and current official Android documentation.
 
-**Status:** the native stack, native behavior over exact visual fidelity, and use of Google's existing controls are accepted in [decision 12](DECISIONS.md#12-ui-design-and-implementation-references--accepted-2026-10-25). The native theme, My books collection controls and secondary Downloads overview were implemented on 2026-10-25, as described below. Other screen behavior and delivery recommendations remain proposed. This document describes UI architecture; implementation tasks belong in Beads.
+**Status:** the native stack, native behavior over exact visual fidelity, and use of Google's existing controls are accepted in [decision 12](DECISIONS.md#12-ui-design-and-implementation-references--accepted-2026-10-25). The native theme, My books collection controls, secondary Downloads overview, grouped Browse and library management were implemented on 2026-10-25, as described below. Other screen behavior and delivery recommendations remain proposed. This document describes UI architecture; implementation tasks belong in Beads.
 
 ## Design principle
 

@@ -11,12 +11,11 @@ import io.github.drolevar.audiotales.ui.theme.AudioTalesTheme
 private val PreviewCatalogue = CatalogueUiState(
     libraries = listOf(OnlineLibrary("preview", "https://example.org/", "Example library", LibraryProtocol.LIBRIVOX)),
     librariesLoading = false,
-    selectedLibraryId = "preview",
-    books = listOf(
+    sources = mapOf("preview" to CatalogueSourceState(books = listOf(
         CatalogueBook("preview", "1", "Dramatic Reading Scene and Story Collection, Volume 003", "Various authors", "A collection of stories.", null, null),
         CatalogueBook("preview", "2", "Роберт Шеклі — Через травний тракт у космос", null, "", null, null),
     ),
-    nextOffset = 2,
+    nextOffset = 2)),
 )
 
 @Preview(name = "Browse · catalogue", widthDp = 393, heightDp = 852, showSystemUi = true)
@@ -29,10 +28,13 @@ private fun CataloguePreview() {
             state = PreviewCatalogue,
             onQueryChanged = {},
             onSearch = {},
-            onLibrarySelected = {},
-            onAddLibrary = {},
+            onLibrarySelected = { _, _ -> },
+            onManageLibraries = {},
             onRetryLibraries = {},
             onLoadMore = {},
+            onRetrySource = {},
+            onSort = {},
+            onLanguage = { _, _ -> },
             onInspect = {},
         )
     }
@@ -46,10 +48,13 @@ private fun EmptyCataloguePreview() {
             state = CatalogueUiState(librariesLoading = false),
             onQueryChanged = {},
             onSearch = {},
-            onLibrarySelected = {},
-            onAddLibrary = {},
+            onLibrarySelected = { _, _ -> },
+            onManageLibraries = {},
             onRetryLibraries = {},
             onLoadMore = {},
+            onRetrySource = {},
+            onSort = {},
+            onLanguage = { _, _ -> },
             onInspect = {},
         )
     }

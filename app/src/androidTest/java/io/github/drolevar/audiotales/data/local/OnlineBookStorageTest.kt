@@ -10,6 +10,9 @@ import io.github.drolevar.audiotales.data.library.LibraryTrack
 import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
 import io.github.drolevar.audiotales.data.library.RoomLibraryRepository
 import io.github.drolevar.audiotales.data.online.LibraryProtocolParser
+import io.github.drolevar.audiotales.data.online.OnlineBookException
+import io.github.drolevar.audiotales.data.online.OnlineLibraries
+import io.github.drolevar.audiotales.data.online.ProviderHttpClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -30,6 +33,10 @@ import org.junit.Assert.fail
 import org.junit.Test
 import org.junit.runner.RunWith
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.OkHttpClient
+import okhttp3.Protocol
+import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 
 @RunWith(AndroidJUnit4::class)
 class OnlineBookStorageTest {
@@ -179,6 +186,148 @@ class OnlineBookStorageTest {
     }
 
     @Test
+    fun versionFourMigrationRegistersAndSelectsLibrariesWithoutChangingSavedData() = runTest {
+        val name = "migration-registration-v4-test.db"
+        context.deleteDatabase(name)
+        try {
+            val schema = JSONObject(instrumentation.context.assets.open(
+                "io.github.drolevar.audiotales.data.local.AudioTalesDatabase/4.json",
+            ).bufferedReader().use { it.readText() }).getJSONObject("database")
+            SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), null).use { old ->
+                val entities = schema.getJSONArray("entities")
+                for (i in 0 until entities.length()) {
+                    val entity = entities.getJSONObject(i)
+                    fun sql(text: String) = text.replace("\${TABLE_NAME}", entity.getString("tableName"))
+                    old.execSQL(sql(entity.getString("createSql")))
+                    val indices = entity.optJSONArray("indices") ?: continue
+                    for (j in 0 until indices.length()) old.execSQL(sql(indices.getJSONObject(j).getString("createSql")))
+                }
+                old.execSQL("INSERT INTO online_libraries VALUES ('library', 'https://library.example/', 'My library', 'PARTNER')")
+                old.execSQL("INSERT INTO books VALUES ('saved', 'Saved book', 'Author', 'library', '42', 'https://library.example/', 'https://covers.example/book.jpg', 'https://library.example/')")
+                old.execSQL("INSERT INTO tracks VALUES ('track', 'saved', 'Chapter', 'https://cdn.example/book.mp3', 0, 100000, '/book.mp3', 'https://library.example/mobapp', 'https://library.example/')")
+                old.execSQL("INSERT INTO playback_progress VALUES ('saved', 'track', 45000, 10000)")
+                old.execSQL("INSERT INTO bookmarks VALUES ('mark', 'saved', 'track', 15000, 'Keep this', 9000)")
+                old.version = 4
+            }
+            val database = openDatabase(name)
+            try {
+                val dao = database.libraryDao()
+                assertEquals(OnlineLibraryEntity("library", "https://library.example/", "My library", "PARTNER"),
+                    dao.observeOnlineLibraries().first().single())
+                assertEquals(BookEntity("saved", "Saved book", "Author", "library", "42", "https://library.example/",
+                    "https://covers.example/book.jpg", "https://library.example/"), dao.getBook("saved"))
+                assertEquals(TrackEntity("track", "saved", "Chapter", "https://cdn.example/book.mp3", 0, 100000,
+                    "/book.mp3", "https://library.example/mobapp", "https://library.example/"), dao.getTrack("track"))
+                assertEquals(PlaybackProgressEntity("saved", "track", 45000, 10000), dao.getProgress("saved"))
+                assertEquals(BookmarkEntity("mark", "saved", "track", 15000, "Keep this", 9000),
+                    dao.observeBookmarks("saved").first().single())
+            } finally { database.close() }
+        } finally { context.deleteDatabase(name) }
+    }
+
+    @Test
+    fun selectionRenameRemovalAndReadditionPreserveSavedSourceAndListeningData() = runTest {
+        val name = "library-management-test.db"
+        context.deleteDatabase(name)
+        try {
+            val database = openDatabase(name)
+            try {
+                val dao = database.libraryDao()
+                val repository = RoomLibraryRepository(dao)
+                // Re-registration must preserve even a historical ID that differs from the URL hash.
+                val source = OnlineLibraryEntity("historical-library", "https://librivox.org/", "LibriVox", "LIBRIVOX")
+                dao.insertOnlineLibrary(source)
+                val saved = book().copy(providerId = source.id, tracks = book().tracks.map { it.copy(providerTrackRef = "201") })
+                repository.addOnlineBook(saved)
+                val track = saved.tracks.single()
+                dao.saveProgress(PlaybackProgressEntity(saved.id, track.id, 45000, 10000))
+                dao.insertBookmark(BookmarkEntity("mark", saved.id, track.id, 15000, "Keep this", 9000))
+                var requests = 0
+                val online = onlineLibraries(dao) {
+                    requests++
+                    """{"books":[{"id":"123","title":"Remote book","url_librivox":"https://librivox.org/book/","num_sections":"1","sections":[
+                        {"id":"201","section_number":"0","title":"Chapter","listen_url":"https://archive.org/renewed.mp3"}]}]}"""
+                }
+                online.setLibrarySelected(source.id, false)
+                assertFalse(online.observeLibraries().first().single().isSelected)
+                online.renameLibrary(source.id, "  My classics  ")
+                assertEquals("My classics", online.observeLibraries().first().single().displayName)
+                for (invalid in listOf("   ", "x".repeat(101))) {
+                    try {
+                        online.renameLibrary(source.id, invalid)
+                        fail("Invalid names must be rejected")
+                    } catch (_: IllegalArgumentException) { /* Expected. */ }
+                }
+                val original = requireNotNull(dao.getBook(saved.id))
+                val originalTrack = requireNotNull(dao.getTrack(track.id))
+                online.removeLibrary(source.id)
+                online.removeLibrary(source.id) // Removal is idempotent.
+                assertTrue(online.observeLibraries().first().isEmpty())
+                assertEquals(source.copy(displayName = "My classics", isRegistered = false, isSelected = false), dao.getOnlineLibrary(source.id))
+                assertEquals(original, dao.getBook(saved.id))
+                assertEquals(originalTrack, dao.getTrack(track.id))
+                try {
+                    online.setLibrarySelected(source.id, true)
+                    fail("A removed source must not be selected implicitly")
+                } catch (_: OnlineBookException) { /* Registration is required. */ }
+                try {
+                    online.renameLibrary(source.id, "Hidden name")
+                    fail("A removed source must not be renamed")
+                } catch (_: OnlineBookException) { /* Registration is required. */ }
+                // Saved-source lookup must still find the hidden library for explicit renewal.
+                online.refreshBookSources(saved.id)
+                assertEquals(1, requests)
+                assertEquals(originalTrack.copy(uri = "https://archive.org/renewed.mp3", streamReferer = null, downloadReferer = null), dao.getTrack(track.id))
+                val restored = online.addLibrary(" https://LIBRIVOX.org ")
+                assertEquals(source.id, restored.id)
+                assertEquals("My classics", restored.displayName)
+                assertTrue(restored.isSelected)
+                assertEquals(1, requests) // Existing sources do not repeat provider validation.
+                online.setLibrarySelected(source.id, false)
+                assertTrue(online.addLibrary(source.baseUrl).isSelected)
+                assertEquals(1, online.observeLibraries().first().size)
+                assertEquals(original, dao.getBook(saved.id))
+                assertEquals(PlaybackProgressEntity(saved.id, track.id, 45000, 10000), dao.getProgress(saved.id))
+                assertEquals(BookmarkEntity("mark", saved.id, track.id, 15000, "Keep this", 9000), dao.observeBookmarks(saved.id).first().single())
+                online.setLibrarySelected(source.id, false)
+            } finally { database.close() }
+            val reopened = openDatabase(name)
+            try {
+                val restored = reopened.libraryDao().observeOnlineLibraries().first().single()
+                assertEquals("historical-library", restored.id)
+                assertEquals("My classics", restored.displayName)
+                assertFalse(restored.isSelected)
+            } finally { reopened.close() }
+        } finally { context.deleteDatabase(name) }
+    }
+
+    @Test
+    fun newLibraryStillRequiresValidCatalogueBeforeRegistration() = runTest {
+        val name = "library-validation-test.db"
+        context.deleteDatabase(name)
+        val database = openDatabase(name)
+        try {
+            val dao = database.libraryDao()
+            var response = "<html>Success is not a catalogue</html>"
+            var requests = 0
+            val online = onlineLibraries(dao) { requests++; response }
+            try {
+                online.addLibrary("https://librivox.org/")
+                fail("HTTP success without catalogue shape must not register a source")
+            } catch (_: OnlineBookException) { /* Expected. */ }
+            assertTrue(dao.observeOnlineLibraries().first().isEmpty())
+            response = """{"books":[]}"""
+            val added = online.addLibrary("https://librivox.org/")
+            assertTrue(added.isSelected)
+            assertEquals(1, dao.observeOnlineLibraries().first().size)
+            assertEquals(2, requests)
+        } finally {
+            database.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
     fun sourceRefreshPreservesIdentityAndHistoryAndRejectsChangedTrackSets() = runTest {
         val name = "refresh-source-test.db"
         context.deleteDatabase(name)
@@ -321,10 +470,18 @@ class OnlineBookStorageTest {
         }
     }
 
+    private fun onlineLibraries(dao: LibraryDao, response: () -> String): OnlineLibraries {
+        val client = OkHttpClient.Builder().addInterceptor { chain ->
+            Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
+                .body(response().toResponseBody()).build()
+        }.build()
+        return OnlineLibraries(dao, RoomLibraryRepository(dao), ProviderHttpClient(client))
+    }
+
     private fun openDatabase(name: String): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, name)
             .setDriver(AndroidSQLiteDriver())
-            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4)
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5)
             .build()
 
     private fun book() = ResolvedOnlineBook(

@@ -7,7 +7,7 @@
     <string name="catalogue_add_library_help">Enter a compatible online library’s HTTPS address, such as https://librivox.org. AudioTales checks its catalogue before saving it.</string>
     <string name="catalogue_no_libraries">Your online libraries</string>
     <string name="catalogue_no_libraries_help">Add a compatible library to browse its books and search its catalogue.</string>
-    <string name="catalogue_search_hint">Search this catalogue</string>
+    <string name="catalogue_search_hint">Books, authors…</string>
     <string name="catalogue_search">Search</string>
     <string name="catalogue_loading">Loading catalogue…</string>
     <string name="catalogue_checking">Checking library…</string>
@@ -15,8 +15,8 @@
     <string name="catalogue_empty_help">Try another search or library.</string>
     <string name="catalogue_load_more">Load more</string>
     <plurals name="catalogue_shown">
-        <item quantity="one">%1$d book shown</item>
-        <item quantity="other">%1$d books shown</item>
+        <item quantity="one">%1$d shown</item>
+        <item quantity="other">%1$d shown</item>
     </plurals>
     <string name="catalogue_results_for">Results for “%1$s”</string>
     <string name="catalogue_details">Book details</string>
@@ -32,4 +32,36 @@
     <string name="catalogue_library_error">Your online libraries could not be opened. Please try again.</string>
     <string name="catalogue_response_error">This catalogue could not be read. The library may not be compatible, or its service may be temporarily unavailable.</string>
     <string name="catalogue_query_error">Search text can contain up to 300 characters. Shorten your search and try again.</string>
+    <string name="catalogue_options">Browse options</string>
+    <string name="catalogue_manage_libraries">Manage libraries</string>
+    <string name="catalogue_choose_libraries">Choose libraries</string>
+    <string name="catalogue_choose_libraries_help">Select the online libraries to include in Browse.</string>
+    <string name="catalogue_libraries_count">Libraries · %1$d</string>
+    <string name="catalogue_done">Done</string>
+    <string name="catalogue_up">Back</string>
+    <string name="catalogue_library_order">Library order</string>
+    <string name="catalogue_sort_title">Title</string>
+    <string name="catalogue_sort_author">Author</string>
+    <string name="catalogue_sort_shown">Sort shown books</string>
+    <string name="catalogue_all_languages">All languages</string>
+    <string name="catalogue_language_shown">Languages in shown results</string>
+    <string name="catalogue_no_language_results">No %1$s books in these results</string>
+    <string name="catalogue_language_help">Load more results or choose another language.</string>
+    <string name="catalogue_your_libraries">Your libraries</string>
+    <plurals name="catalogue_selected">
+        <item quantity="one">%1$d selected</item>
+        <item quantity="other">%1$d selected</item>
+    </plurals>
+    <string name="catalogue_library_removed">Library is no longer available</string>
+    <string name="catalogue_include_library">Include %1$s in Browse</string>
+    <string name="catalogue_browse_library">Browse %1$s</string>
+    <string name="catalogue_library_options">Options for %1$s</string>
+    <string name="catalogue_rename">Rename</string>
+    <string name="catalogue_share">Share</string>
+    <string name="catalogue_remove">Remove</string>
+    <string name="catalogue_rename_library">Rename library</string>
+    <string name="catalogue_library_name">Library name</string>
+    <string name="catalogue_remove_library">Remove %1$s?</string>
+    <string name="catalogue_remove_library_help">This removes the library from Browse. Saved books, downloads, and listening history are kept.</string>
+    <string name="catalogue_manage_help">Select libraries to include in Browse. Tap a library name to browse its catalogue.</string>
 </resources>

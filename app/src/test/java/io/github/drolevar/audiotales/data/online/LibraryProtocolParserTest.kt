@@ -113,6 +113,17 @@ class LibraryProtocolParserTest {
         assertThrows(OnlineBookException::class.java) { LibraryProtocolParser.librivoxMetadata(org, "11455", """{"books":[]}""") }
     }
 
+    @Test fun languageComesOnlyFromLibrivoxMetadataAndBlankLanguageIsAbsent() {
+        val org = OnlineLibrary("org", "https://librivox.org/", "LibriVox", LibraryProtocol.LIBRIVOX)
+        val json = """{"books":[{"id":"42","title":"Book","language":"  English  "}]}"""
+        assertEquals("English", LibraryProtocolParser.catalogue(org, json).single().language)
+        assertEquals("English", LibraryProtocolParser.librivoxMetadata(org, "42", json).language)
+        assertNull(LibraryProtocolParser.catalogue(org, json.replace("  English  ", "   ")).single().language)
+        assertNull(LibraryProtocolParser.catalogue(org, """{"books":[{"id":"42","title":"Book"}]}""").single().language)
+        val partner = metadata.dropLast(1) + ",\"language\":\"English\"}"
+        assertNull(LibraryProtocolParser.catalogue(source, "[$partner]").single().language)
+    }
+
     @Test fun htmlSuccessAndDuplicateRemoteIdsAreRejected() {
         listOf("Hacking attempt!", "[$metadata,$metadata]", "{}").forEach {
             assertThrows(OnlineBookException::class.java) { LibraryProtocolParser.catalogue(source, it) }

@@ -11,11 +11,35 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LibraryDao {
-    @Query("SELECT * FROM online_libraries ORDER BY displayName COLLATE NOCASE, id")
+    @Query("SELECT * FROM online_libraries WHERE isRegistered = 1 ORDER BY displayName COLLATE NOCASE, id")
     fun observeOnlineLibraries(): Flow<List<OnlineLibraryEntity>>
 
     @Query("SELECT * FROM online_libraries WHERE id = :id")
     suspend fun getOnlineLibrary(id: String): OnlineLibraryEntity?
+
+    @Query("SELECT * FROM online_libraries WHERE baseUrl = :baseUrl")
+    suspend fun getOnlineLibraryByBaseUrl(baseUrl: String): OnlineLibraryEntity?
+
+    @Query("UPDATE online_libraries SET isRegistered = 1, isSelected = 1 WHERE id = :id")
+    suspend fun restoreOnlineLibrary(id: String)
+
+    @Query("UPDATE online_libraries SET isSelected = :selected WHERE id = :id AND isRegistered = 1")
+    suspend fun setOnlineLibrarySelected(id: String, selected: Boolean): Int
+
+    @Query("UPDATE online_libraries SET displayName = :name WHERE id = :id AND isRegistered = 1")
+    suspend fun renameOnlineLibrary(id: String, name: String): Int
+
+    @Query("UPDATE online_libraries SET isRegistered = 0, isSelected = 0 WHERE id = :id AND isRegistered = 1")
+    suspend fun removeOnlineLibrary(id: String)
+
+    /** Restore registration without replacing stable identity or a listener's custom name. */
+    @Transaction
+    suspend fun registerOnlineLibrary(candidate: OnlineLibraryEntity): OnlineLibraryEntity {
+        insertOnlineLibrary(candidate)
+        val existing = requireNotNull(getOnlineLibraryByBaseUrl(candidate.baseUrl))
+        restoreOnlineLibrary(existing.id)
+        return requireNotNull(getOnlineLibrary(existing.id))
+    }
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertOnlineLibrary(library: OnlineLibraryEntity)
