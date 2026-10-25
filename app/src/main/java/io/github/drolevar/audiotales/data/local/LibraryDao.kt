@@ -63,6 +63,10 @@ interface LibraryDao {
     @Query("UPDATE books SET coverUrl = :coverUrl, coverReferer = :coverReferer WHERE id = :bookId AND providerId = :providerId AND providerBookId = :providerBookId")
     suspend fun updateBookArtwork(bookId: String, providerId: String, providerBookId: String, coverUrl: String, coverReferer: String?): Int
 
+    /** Null fields mean unavailable metadata; an explicitly empty description is known. */
+    @Query("UPDATE books SET description = COALESCE(:description, description), language = COALESCE(:language, language), coverUrl = COALESCE(:coverUrl, coverUrl), coverReferer = CASE WHEN :coverUrl IS NULL THEN coverReferer ELSE :coverReferer END WHERE id = :bookId AND providerId = :providerId AND providerBookId = :providerBookId")
+    suspend fun updateBookMetadata(bookId: String, providerId: String, providerBookId: String, description: String?, language: String?, coverUrl: String?, coverReferer: String?): Int
+
     @Query("SELECT * FROM tracks WHERE bookId = :bookId ORDER BY sequenceIndex, id")
     suspend fun getTracks(bookId: String): List<TrackEntity>
 
@@ -120,6 +124,7 @@ interface LibraryDao {
 
     @Transaction
     suspend fun insertOnlineBookIfAbsent(book: BookEntity, tracks: List<TrackEntity>): Boolean {
+        require(book.id.isNotBlank())
         require(!book.providerId.isNullOrBlank() && !book.providerBookId.isNullOrBlank())
         require(!book.sourceUrl.isNullOrBlank() && book.title.isNotBlank())
         require(tracks.isNotEmpty() && tracks.all { it.bookId == book.id })
@@ -127,9 +132,9 @@ interface LibraryDao {
         if (insertBookIfAbsent(book) == -1L) {
             val existing = getProviderBook(book.providerId, book.providerBookId)
             val cover = validArtworkUrl(book.coverUrl)
-            if (existing != null && cover != null) {
-                updateBookArtwork(existing.id, book.providerId, book.providerBookId, cover, validArtworkUrl(book.coverReferer))
-            }
+            requireNotNull(existing) { "Book identity conflicts with another saved recording" }
+            require(updateBookMetadata(existing.id, book.providerId, book.providerBookId, book.description, book.language,
+                cover, cover?.let { validArtworkUrl(book.coverReferer) }) == 1)
             return false
         }
         insertTracks(tracks)

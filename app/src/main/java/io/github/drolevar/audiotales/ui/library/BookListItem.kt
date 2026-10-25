@@ -42,6 +42,7 @@ internal fun BookListItem(
     row: CollectionRow,
     busy: Boolean,
     onOpenBook: () -> Unit,
+    onBookDetails: () -> Unit,
     onDownloadAction: () -> Unit,
     onOpenDownloads: () -> Unit,
     onRemoveDownloads: () -> Unit,
@@ -102,6 +103,7 @@ internal fun BookListItem(
                     Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.collection_book_actions, book.title))
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                    DropdownMenuItem(text = { Text(stringResource(R.string.book_details_title)) }, onClick = { menuExpanded = false; onBookDetails() })
                     DropdownMenuItem(text = { Text(stringResource(R.string.collection_open_player)) }, onClick = { menuExpanded = false; onOpenBook() })
                     if (!row.download.complete) DropdownMenuItem(
                         text = { Text(downloadMenuLabel(action)) },

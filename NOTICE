@@ -3,5 +3,5 @@ Source: https://fonts.google.com/icons
 License: licenses/MaterialSymbols-LICENSE.txt
 
 Imported outlined 24dp symbols: download, download_done, more_vert, pause,
-play_arrow, refresh, keyboard_arrow_down, check. Drawable tint attributes were
+play_arrow, refresh, keyboard_arrow_down, check, queue_music. Drawable tint attributes were
 removed so Compose Material Icon supplies the active theme color.

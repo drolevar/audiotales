@@ -19,6 +19,8 @@ data class BookEntity(
     val sourceUrl: String? = null,
     val coverUrl: String? = null,
     val coverReferer: String? = null,
+    val description: String? = null,
+    val language: String? = null,
 )
 
 @Entity(

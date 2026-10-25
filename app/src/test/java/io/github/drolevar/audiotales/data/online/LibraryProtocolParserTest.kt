@@ -129,4 +129,36 @@ class LibraryProtocolParserTest {
             assertThrows(OnlineBookException::class.java) { LibraryProtocolParser.catalogue(source, it) }
         }
     }
+
+    @Test fun resolvedDetailsUseCleanProviderTextAndOnlyVerifiedLanguage() {
+        val partner = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(
+            metadata.dropLast(1) + ",\"language\":\"Invented language\"}"))
+        val resolvedPartner = LibraryProtocolParser.partnerResolution(source, partner,
+            """[{"title":"One","file":"https://cdn.example/track.mp3"}]""")
+        assertEquals("Description", resolvedPartner.description)
+        assertNull(resolvedPartner.language)
+        assertNull(resolvedPartner.tracks.single().durationMs)
+
+        val org = OnlineLibrary("org", "https://librivox.org/", "LibriVox", LibraryProtocol.LIBRIVOX)
+        val json = """{"books":[{"id":"42","title":"Book","description":"<p>A &amp; B</p>","language":" English ",
+            "url_librivox":"https://librivox.org/book/","num_sections":"1","sections":[
+            {"id":"1","section_number":"0","title":"Chapter","listen_url":"https://archive.org/book.mp3"}]}]}"""
+        val resolved = LibraryProtocolParser.librivoxResolution(org, "42", json)
+        assertEquals("A & B", resolved.description)
+        assertEquals("English", resolved.language)
+    }
+
+    @Test fun descriptionDistinguishesMissingNullAndExplicitlyEmptyFields() {
+        val org = OnlineLibrary("org", "https://librivox.org/", "LibriVox", LibraryProtocol.LIBRIVOX)
+        for (field in listOf("", ",\"description\":null")) {
+            assertNull(LibraryProtocolParser.librivoxMetadata(org, "42",
+                """{"books":[{"id":"42","title":"Book"$field}]}""").description)
+        }
+        assertEquals("", LibraryProtocolParser.librivoxMetadata(org, "42",
+            """{"books":[{"id":"42","title":"Book","description":" <p></p> "}]}""").description)
+        assertNull(LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(
+            """{"id":"42","namebook":"Book"}""")).description)
+        assertEquals("", LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(
+            """{"id":"42","namebook":"Book","short_story":""}""")).description)
+    }
 }

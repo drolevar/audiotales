@@ -280,54 +280,6 @@ internal fun AddLibraryDialog(
 }
 
 @Composable
-internal fun CatalogueDetailsDialog(
-    state: CatalogueUiState,
-    onSave: () -> Unit,
-    onOpenBook: (String) -> Unit,
-    onDismiss: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val book = state.details ?: return
-    AlertDialog(
-        modifier = modifier,
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.catalogue_details)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    BookCover(book.coverUrl, Modifier.size(width = 80.dp, height = 112.dp), referer = book.coverReferer)
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(book.title, style = MaterialTheme.typography.titleLarge)
-                        book.author?.takeIf(String::isNotBlank)?.let { Text(it) }
-                        state.libraries.firstOrNull { it.id == book.libraryId }?.let {
-                            Text(it.displayName, style = MaterialTheme.typography.labelMedium)
-                        }
-                    }
-                }
-                if (state.saved != null) Text(stringResource(R.string.catalogue_saved), modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
-                if (state.saving) {
-                    LinearProgressIndicator(Modifier.fillMaxWidth())
-                    Text(stringResource(R.string.catalogue_saving))
-                }
-                state.saveError?.let { CatalogueError(it) }
-                HorizontalDivider()
-                Text(stringResource(R.string.catalogue_description), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-                Text(book.description.ifBlank { stringResource(R.string.catalogue_no_description) })
-            }
-        },
-        confirmButton = {
-            val saved = state.saved
-            if (saved != null) {
-                TextButton(onClick = { onDismiss(); onOpenBook(saved.book.id) }) { Text(stringResource(R.string.catalogue_open_saved)) }
-            } else {
-                TextButton(onClick = onSave, enabled = !state.saving) { Text(stringResource(R.string.catalogue_save)) }
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
-    )
-}
-
-@Composable
 private fun CatalogueLoading() {
     Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
         CircularProgressIndicator()

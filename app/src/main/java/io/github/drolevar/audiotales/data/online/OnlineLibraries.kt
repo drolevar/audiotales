@@ -5,6 +5,7 @@ import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryAddition
 import io.github.drolevar.audiotales.data.library.LibraryRepository
 import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
+import io.github.drolevar.audiotales.data.library.validArtworkUrl
 import io.github.drolevar.audiotales.data.local.LibraryDao
 import io.github.drolevar.audiotales.data.local.OnlineLibraryEntity
 import io.github.drolevar.audiotales.data.local.TrackEntity
@@ -36,7 +37,8 @@ data class CatalogueBook(
     val remoteId: String,
     val title: String,
     val author: String?,
-    val description: String,
+    /** Null means not provided by the source; empty means explicitly provided without text. */
+    val description: String? = null,
     val coverUrl: String?,
     val sourceUrl: String?,
     val coverReferer: String? = null,
@@ -50,7 +52,7 @@ internal class OnlineLibraries @Inject constructor(
     private val dao: LibraryDao,
     private val library: LibraryRepository,
     private val http: ProviderHttpClient,
-) : OnlineCatalogue {
+) : OnlineCatalogue, OnlineBookDetailsSource {
     private val artworkRefreshMutex = Mutex()
     // Rotate within this application process, including past permanently coverless records.
     private var artworkRefreshCursor: String? = null
@@ -83,6 +85,11 @@ internal class OnlineLibraries @Inject constructor(
         val source = getLibrary(libraryId)
         LibraryProtocolParser.requireId(remoteId)
         resolveAndSave(source, remoteId)
+    }
+
+    override suspend fun inspectBook(libraryId: String, remoteId: String): ResolvedOnlineBook = withContext(Dispatchers.IO) {
+        LibraryProtocolParser.requireId(remoteId)
+        resolve(getLibrary(libraryId), remoteId)
     }
 
     override suspend fun setLibrarySelected(id: String, selected: Boolean): Unit = withContext(Dispatchers.IO) {
@@ -121,6 +128,20 @@ internal class OnlineLibraries @Inject constructor(
         library.getBook(bookId)
     }
 
+    /** A single metadata response updates optional details without inspecting or replacing tracks. */
+    override suspend fun refreshBookMetadata(bookId: String): LibraryBook? = withContext(Dispatchers.IO) {
+        val book = library.getBook(bookId) ?: return@withContext null
+        val providerId = book.providerId ?: return@withContext book
+        val remoteId = book.providerBookId ?: return@withContext book
+        LibraryProtocolParser.requireId(remoteId)
+        val details = metadata(getLibrary(providerId), remoteId)
+        if (details.libraryId != providerId || details.remoteId != remoteId) unexpectedProtocol()
+        val cover = validArtworkUrl(details.coverUrl)
+        if (dao.updateBookMetadata(bookId, providerId, remoteId, details.description, details.language,
+                cover, cover?.let { validArtworkUrl(details.coverReferer) }) != 1) unexpectedProtocol()
+        library.getBook(bookId)
+    }
+
     /** One rotating, bounded snapshot per invocation. Failures do not starve later books. */
     suspend fun refreshMissingArtwork(): Unit = withContext(Dispatchers.IO) {
         artworkRefreshMutex.withLock {
@@ -139,7 +160,7 @@ internal class OnlineLibraries @Inject constructor(
     }
 
     /** Explicit online recovery. Cached playback does not call this method. */
-    suspend fun refreshBookSources(bookId: String): Unit = withContext(Dispatchers.IO) {
+    override suspend fun refreshBookSources(bookId: String): Unit = withContext(Dispatchers.IO) {
         val book = library.getBook(bookId) ?: unexpectedProtocol()
         val source = getLibrary(book.providerId ?: unexpectedProtocol())
         val refreshed = resolve(source, book.providerBookId ?: unexpectedProtocol())
@@ -153,9 +174,12 @@ internal class OnlineLibraries @Inject constructor(
         })
     }
 
-    private suspend fun resolve(source: OnlineLibrary, remoteId: String): ResolvedOnlineBook = when (source.protocol) {
-        LibraryProtocol.PARTNER -> resolvePartner(source, remoteId)
-        LibraryProtocol.LIBRIVOX -> resolveLibrivox(source, remoteId)
+    private suspend fun resolve(source: OnlineLibrary, remoteId: String): ResolvedOnlineBook {
+        LibraryProtocolParser.requireId(remoteId)
+        return when (source.protocol) {
+            LibraryProtocol.PARTNER -> resolvePartner(source, remoteId)
+            LibraryProtocol.LIBRIVOX -> resolveLibrivox(source, remoteId)
+        }
     }
 
     suspend fun addBookLink(input: String): LibraryAddition = withContext(Dispatchers.IO) {
@@ -179,8 +203,10 @@ internal class OnlineLibraries @Inject constructor(
         resolveAndSave(source, remoteId, if (source.protocol == LibraryProtocol.LIBRIVOX) url.toString() else null)
     }
 
-    private suspend fun getLibrary(id: String): OnlineLibrary =
-        dao.getOnlineLibrary(id)?.toLibrary() ?: unsupportedLibrary()
+    override suspend fun getLibrary(libraryId: String): OnlineLibrary {
+        if (libraryId.isBlank() || libraryId.length > 1024) unsupportedLibrary()
+        return dao.getOnlineLibrary(libraryId)?.toLibrary() ?: unsupportedLibrary()
+    }
 
     private suspend fun catalogue(source: OnlineLibrary, query: String, offset: Int): CataloguePage {
         if (source.protocol == LibraryProtocol.LIBRIVOX && query.isNotBlank()) {

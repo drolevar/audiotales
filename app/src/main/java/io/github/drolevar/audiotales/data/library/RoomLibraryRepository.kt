@@ -36,6 +36,7 @@ class RoomLibraryRepository @Inject constructor(
             id = book.id, title = book.title, author = book.author,
             providerId = book.providerId, providerBookId = book.providerBookId, sourceUrl = book.sourceUrl,
             coverUrl = cover, coverReferer = cover?.let { validArtworkUrl(book.coverReferer) },
+            description = book.description, language = book.language,
         )
         val inserted = dao.insertOnlineBookIfAbsent(entity, book.tracks.map { track ->
             TrackEntity(
@@ -84,4 +85,5 @@ private fun TrackEntity.toLibraryTrack() = LibraryTrack(
 private fun BookEntity.toLibraryBook() = LibraryBook(
     id = id, title = title, author = author,
     providerId = providerId, providerBookId = providerBookId, sourceUrl = sourceUrl, coverUrl = coverUrl, coverReferer = coverReferer,
+    description = description, language = language,
 )

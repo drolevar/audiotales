@@ -34,12 +34,14 @@ import io.github.drolevar.audiotales.R
 import io.github.drolevar.audiotales.data.preferences.ThemeMode
 import io.github.drolevar.audiotales.playback.PlaybackConnection
 import io.github.drolevar.audiotales.ui.catalogue.AddLibraryDialog
-import io.github.drolevar.audiotales.ui.catalogue.CatalogueDetailsDialog
 import io.github.drolevar.audiotales.ui.catalogue.CatalogueScreen
 import io.github.drolevar.audiotales.ui.catalogue.CatalogueViewModel
 import io.github.drolevar.audiotales.ui.catalogue.CatalogueUiState
 import io.github.drolevar.audiotales.ui.catalogue.ManageLibrariesScreen
 import io.github.drolevar.audiotales.ui.catalogue.LibraryManagementDialogs
+import io.github.drolevar.audiotales.ui.details.BookDetailsRoute
+import io.github.drolevar.audiotales.ui.details.BookDetailsTarget
+import io.github.drolevar.audiotales.data.online.CatalogueBook
 import io.github.drolevar.audiotales.ui.downloads.DownloadsRoute
 import io.github.drolevar.audiotales.ui.library.LibraryScreen
 import io.github.drolevar.audiotales.ui.library.LibraryUiState
@@ -56,6 +58,9 @@ private data object LibraryDestination : NavKey
 
 @Serializable
 private data class PlayerDestination(val bookId: String) : NavKey
+
+@Serializable
+private data class BookDetailsDestination(val bookId: String? = null, val libraryId: String? = null, val remoteId: String? = null) : NavKey
 
 @Serializable
 private data object DownloadsDestination : NavKey
@@ -151,6 +156,7 @@ fun AudioTalesApp(
                                                 onRetry = viewModel::retry,
                                                 onSettings = { selectedTab = 2 },
                                                 onOpenBook = openBook,
+                                                onBookDetails = { navigate(BookDetailsDestination(bookId = it)) },
                                                 onOpenDownloads = { navigate(DownloadsDestination) },
                                                 onFilterChange = viewModel::selectFilter,
                                                 onSortChange = viewModel::selectSort,
@@ -166,6 +172,7 @@ fun AudioTalesApp(
                                                 CatalogueBrowseContent(
                                                     catalogue, catalogueState,
                                                     onManage = { navigate(ManageLibrariesDestination) },
+                                                    onInspect = { navigate(BookDetailsDestination(libraryId = it.libraryId, remoteId = it.remoteId)) },
                                                 )
                                             }
                                             else -> SettingsScreen(
@@ -197,14 +204,7 @@ fun AudioTalesApp(
                                 onDismiss = catalogue::dismissAddLibrary,
                             )
                         }
-                        if (catalogueState.details != null) {
-                            CatalogueDetailsDialog(
-                                state = catalogueState,
-                                onSave = catalogue::saveBook,
-                                onOpenBook = openBook,
-                                onDismiss = catalogue::dismissDetails,
-                            )
-                        }
+
                     }
                     entry<ManageLibrariesDestination> {
                         val catalogue: CatalogueViewModel = hiltViewModel()
@@ -234,7 +234,7 @@ fun AudioTalesApp(
                                 books = (libraryState as? LibraryUiState.Content)?.books.orEmpty(),
                             )
                         }
-                        CatalogueDialogs(catalogue, state, { navigate(PlayerDestination(it)) })
+                        CatalogueDialogs(catalogue, state)
                         LibraryManagementDialogs(state, catalogue::setLibraryName, catalogue::confirmRename, catalogue::confirmRemove, catalogue::dismissLibraryAction)
                     }
                     entry<BrowseLibraryDestination> { destination ->
@@ -248,7 +248,8 @@ fun AudioTalesApp(
                         }
                         Column(Modifier.fillMaxSize()) {
                             Box(Modifier.weight(1f)) {
-                                CatalogueBrowseContent(catalogue, state, onManage = goBack, onBack = goBack)
+                                CatalogueBrowseContent(catalogue, state, onManage = goBack, onBack = goBack,
+                                    onInspect = { navigate(BookDetailsDestination(libraryId = it.libraryId, remoteId = it.remoteId)) })
                             }
                             MiniPlayerBar(
                                 connection = playbackConnection,
@@ -256,7 +257,16 @@ fun AudioTalesApp(
                                 books = (libraryState as? LibraryUiState.Content)?.books.orEmpty(),
                             )
                         }
-                        CatalogueDialogs(catalogue, state, { navigate(PlayerDestination(it)) })
+                        CatalogueDialogs(catalogue, state)
+                    }
+                    entry<BookDetailsDestination> { destination ->
+                        BookDetailsRoute(
+                            target = BookDetailsTarget(destination.bookId, destination.libraryId, destination.remoteId),
+                            connection = playbackConnection,
+                            onBack = goBack,
+                            onPlayer = { navigate(PlayerDestination(it)) },
+                            onDownloads = { navigate(DownloadsDestination) },
+                        )
                     }
                     entry<PlayerDestination> { destination ->
                         BookPlayerRoute(
@@ -288,6 +298,7 @@ private fun CatalogueBrowseContent(
     catalogue: CatalogueViewModel,
     state: CatalogueUiState,
     onManage: () -> Unit,
+    onInspect: (CatalogueBook) -> Unit,
     onBack: (() -> Unit)? = null,
 ) {
     CatalogueScreen(
@@ -301,15 +312,14 @@ private fun CatalogueBrowseContent(
         onLoadMore = catalogue::loadMore,
         onSort = catalogue::selectSort,
         onLanguage = catalogue::selectLanguage,
-        onInspect = catalogue::inspect,
+        onInspect = onInspect,
         onBack = onBack,
     )
 }
 
 @Composable
-private fun CatalogueDialogs(catalogue: CatalogueViewModel, state: CatalogueUiState, onOpenBook: (String) -> Unit) {
+private fun CatalogueDialogs(catalogue: CatalogueViewModel, state: CatalogueUiState) {
     state.addLibrary?.let { input ->
         AddLibraryDialog(input, catalogue::setLibraryUrl, catalogue::addLibrary, catalogue::dismissAddLibrary)
     }
-    if (state.details != null) CatalogueDetailsDialog(state, catalogue::saveBook, onOpenBook, catalogue::dismissDetails)
 }

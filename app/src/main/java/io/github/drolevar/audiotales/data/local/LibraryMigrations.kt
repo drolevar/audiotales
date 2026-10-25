@@ -6,6 +6,13 @@ import androidx.sqlite.execSQL
 import java.security.MessageDigest
 
 object LibraryMigrations {
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE books ADD COLUMN description TEXT")
+            connection.execSQL("ALTER TABLE books ADD COLUMN language TEXT")
+        }
+    }
+
     val MIGRATION_4_5 = object : Migration(4, 5) {
         override suspend fun migrate(connection: SQLiteConnection) {
             connection.execSQL("ALTER TABLE online_libraries ADD COLUMN isRegistered INTEGER NOT NULL DEFAULT 1")

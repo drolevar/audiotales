@@ -4,7 +4,6 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import io.github.drolevar.audiotales.data.library.LibraryAddition
 import io.github.drolevar.audiotales.data.online.*
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -45,10 +44,6 @@ internal data class CatalogueUiState(
     val sources: Map<String, CatalogueSourceState> = emptyMap(),
     val sort: CatalogueSort = CatalogueSort.LIBRARY,
     val addLibrary: AddLibraryUiState? = null,
-    val details: CatalogueBook? = null,
-    val saving: Boolean = false,
-    val saved: LibraryAddition? = null,
-    val saveError: OnlineBookError? = null,
     val editingLibrary: OnlineLibrary? = null,
     val libraryName: String = "",
     val removingLibrary: OnlineLibrary? = null,
@@ -76,7 +71,6 @@ internal class CatalogueViewModel @Inject constructor(
     private val generations = mutableMapOf<String, Long>()
     private var libraryJob: Job? = null
     private var addJob: Job? = null
-    private var saveJob: Job? = null
     private var active = false
     private val pendingLoads = mutableMapOf<String, Boolean>()
 
@@ -229,25 +223,6 @@ internal class CatalogueViewModel @Inject constructor(
             } catch (error: Exception) {
                 currentCoroutineContext().ensureActive()
                 _state.update { it.copy(addLibrary = input.copy(error = error.onlineReason())) }
-            }
-        }
-    }
-    fun inspect(book: CatalogueBook) { saveJob?.cancel(); _state.update { it.copy(details = book, saving = false, saved = null, saveError = null) } }
-    fun dismissDetails() { saveJob?.cancel(); _state.update { it.copy(details = null, saving = false, saved = null, saveError = null) } }
-    fun saveBook() {
-        val input = _state.value
-        val book = input.details ?: return
-        if (input.saving || input.saved != null) return
-        _state.update { it.copy(saving = true, saveError = null) }
-        saveJob = viewModelScope.launch {
-            try {
-                val result = onlineLibraries.saveBook(book.libraryId, book.remoteId)
-                currentCoroutineContext().ensureActive()
-                _state.update { it.copy(saving = false, saved = result) }
-            } catch (cancelled: CancellationException) { throw cancelled
-            } catch (error: Exception) {
-                currentCoroutineContext().ensureActive()
-                _state.update { it.copy(saving = false, saveError = error.onlineReason()) }
             }
         }
     }

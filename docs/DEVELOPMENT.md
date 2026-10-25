@@ -8,7 +8,9 @@ For UI work, follow the two [accepted Figma design references and native-control
 
 The development build implements the first online-library flow: register a compatible HTTPS base URL, browse/search its catalogue, inspect a book and save it to My books. Browse owns catalogue discovery and search; My books contains saved books. Book-URL entry has been removed from the UI. Browse groups independently paged results from selected libraries, with per-source failures, native source selection, shown-result sorting and real-language filtering. Manage libraries supports adding, renaming, sharing and removal; individual-library browsing does not change the selected set. Hidden source records remain available to saved-book refresh, and re-adding their base URL restores the same identity. Library instances are persisted separately from protocol adapters. The shared partner protocol and LibriVox.org's public API are separate adapters; arbitrary websites are not automatically compatible.
 
-Room 3 schema versions 1–5 preserve books, ordered tracks, listening progress and bookmarks while adding provider identity, registered libraries, per-track request headers and saved artwork URL/referer metadata, and durable library selection/registration flags. Keep all exported schemas in version control. Source refresh updates only transport URLs/headers after validating the entire stable track set; it preserves IDs, order and listening history.
+Book details is a full secondary screen reached from catalogue rows or the saved-book menu. Inspecting a catalogue book does not save or play it. Explicit Save, Listen and Download actions use the canonical saved identity. Saved details render locally and can refresh optional description/language/artwork without renewing tracks. The track sheet uses actual provider entries; embedded chapter extraction remains future work.
+
+Room 3 schema versions 1–6 preserve books, ordered tracks, listening progress and bookmarks while adding provider identity, registered libraries, per-track request headers and saved artwork URL/referer metadata, durable library selection/registration flags, and nullable saved description/language. Keep all exported schemas in version control. Source refresh updates only transport URLs/headers after validating the entire stable track set; it preserves IDs, order and listening history.
 
 One service-owned Media3 ExoPlayer supplies phone controls, background playback and external controllers. The phone uses Google's Media3 Compose controls. Progress is saved periodically and at playback transitions; opening a book does not autoplay. Explicit Retry refreshes online sources and rebuilds the queue from saved IDs. Completed offline books do not require a provider lookup.
 
@@ -208,6 +210,23 @@ Before calling the player ready for listeners, also perform:
 Record what actually ran. A passing build does not replace these device-level checks.
 
 See [Implementation roadmap](ROADMAP.md) for the assessment, remaining risks, milestone acceptance criteria, and tests to add alongside each feature.
+
+### Book details verification — 2026-10-25
+
+The final bounded JDK 21 build passed `assembleDebug`, `lintDebug`, `testDebugUnitTest` and `assembleDebugAndroidTest` in **1m 38s**. All **79 JVM tests** passed without failures, errors or skips. Lint reported **0 errors, 9 warnings and 1 hint**, retaining the previous warning categories. All **11 Android storage tests** passed on API 35 in **11.181s**, including the populated version 5→6 upgrade and metadata-only updates. Schemas 1–5 remain unchanged; schema 6 adds only nullable book description/language fields.
+
+Independent review found no remaining actionable issues. New tests cover inspection without saving, canonical provider/book and track-reference matching, duplicate saves, failed save/playback/download recovery, cancellation of late responses, download initialization recovery, and retry loading state. Book and source transport authority remain in the repository and shared service; this change introduces no player instance.
+
+API 35 runtime checks used the existing three-book, 31-track collection and real provider responses:
+
+- Upgrading and fetching metadata preserved every prior book field, track, progress record, bookmark and library setting; only the new metadata fields were added. All three supplied provider examples displayed fitted covers and real descriptions.
+- Catalogue inspection of the completed LibriVox **Walden** recording displayed 23 tracks while the saved collection remained at three books. Explicit Save then added one canonical book. Selecting its first track opened the shared player; the media session reported actual playback at more than 18 seconds.
+- Details supported Android sharing, opening Downloads, download start/pause/resume, accurate paused-track labels, and confirmed removal while retaining the saved book. Cancelling removal preserved the offline book.
+- After Android reported the background Activity as stopped with saved state, killing process 6394 and returning in process 7105 restored the details destination, book, language and 29-track list. Opening and restoring details did not start playback.
+- A cold start with no active default network retained the saved description and offline status. Explicit metadata refresh failed without losing that content; Resume played the downloaded audioknigi example at more than 14 minutes through the shared media session.
+- The details screen and track sheet remained usable at font scale 1.5 in portrait and dark landscape. Native scrolling retained access to descriptions and controls in the short window. Covers remained fitted and uncropped.
+
+Validation corrected two selector/setup mistakes: identical search-field/result titles needed a specific result selector, and a process killed while the Activity was still paused had no saved Activity state yet. The stopped-Activity restoration check passed. LibriVox also returned an unfinished Walden project with no source page/audio URLs; inspection correctly showed an unavailable-book state, while the completed recording succeeded. A missing theme argument in a preview was fixed before the passing build. These observations do not establish broader provider availability, Android Auto behavior, or API 26/current-platform qualification. Player arrangement/tools and the full six-screen design audit remain separate work.
 
 ## Release preparation
 

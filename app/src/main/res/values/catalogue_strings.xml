@@ -19,13 +19,6 @@
         <item quantity="other">%1$d shown</item>
     </plurals>
     <string name="catalogue_results_for">Results for “%1$s”</string>
-    <string name="catalogue_details">Book details</string>
-    <string name="catalogue_description">Description</string>
-    <string name="catalogue_no_description">No description is available from this catalogue.</string>
-    <string name="catalogue_save">Save to My books</string>
-    <string name="catalogue_saving">Reading book and track list…</string>
-    <string name="catalogue_open_saved">Open saved book</string>
-    <string name="catalogue_saved">In My books</string>
     <string name="catalogue_invalid_link">Enter a valid HTTPS library address or supported book-page link.</string>
     <string name="catalogue_access_error">This library requires access that is not configured in this app. Try a different library.</string>
     <string name="catalogue_unsupported_library">This address does not expose a supported audiobook catalogue.</string>

@@ -1,0 +1,41 @@
+<resources>
+    <string name="book_details_title">Book details</string>
+    <string name="book_details_up">Navigate up</string>
+    <string name="book_details_options">Book options</string>
+    <string name="book_details_save">Save to My books</string>
+    <string name="book_details_refresh">Refresh details</string>
+    <string name="book_details_share">Share book</string>
+    <string name="book_details_loading">Loading book details…</string>
+    <string name="book_details_load_failed">Couldn’t load this book. Please try again.</string>
+    <string name="book_details_saved">✓ In My books</string>
+    <string name="book_details_unsaved">Not saved to My books</string>
+    <string name="book_details_listen">Listen</string>
+    <string name="book_details_resume">Resume</string>
+    <string name="book_details_actions_save">Listen and Download also save this book to My books.</string>
+    <string name="book_details_track_saves">Playing a track also saves this book to My books.</string>
+    <string name="book_details_connecting">Connecting to the player…</string>
+    <plurals name="book_details_offline">
+        <item quantity="one">Available offline · %1$d of %2$d track saved</item>
+        <item quantity="other">Available offline · %1$d of %2$d tracks saved</item>
+    </plurals>
+    <plurals name="book_details_download_count">
+        <item quantity="one">%1$d of %2$d track saved offline</item>
+        <item quantity="other">%1$d of %2$d tracks saved offline</item>
+    </plurals>
+    <string name="book_details_save_failed">Couldn’t save this book. Try again.</string>
+    <string name="book_details_play_failed">Couldn’t start playback. Try Listen again.</string>
+    <string name="book_details_download_failed">Couldn’t update downloads. Check your connection and try again.</string>
+    <string name="book_details_tracks">Tracks</string>
+    <plurals name="book_details_track_count"><item quantity="one">%d track</item><item quantity="other">%d tracks</item></plurals>
+    <string name="book_details_description">Description</string>
+    <string name="book_details_no_description">No description available.</string>
+    <string name="book_details_refresh_failed">Couldn’t refresh details. Try again when connected.</string>
+    <string name="book_details_current_position">Saved position %1$s</string>
+    <string name="book_details_downloading">Downloading</string>
+    <string name="book_details_checking_downloads">Checking downloads…</string>
+    <string name="book_details_saved_refresh_failed">Couldn’t update saved book information.</string>
+    <string name="book_details_connection_failed">Couldn’t connect to the player.</string>
+    <string name="book_details_paused">Paused</string>
+    <string name="book_details_download_status_failed">Download failed</string>
+    <string name="book_details_queued">Queued</string>
+</resources>

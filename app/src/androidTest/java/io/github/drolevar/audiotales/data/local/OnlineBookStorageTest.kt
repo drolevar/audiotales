@@ -81,6 +81,8 @@ class OnlineBookStorageTest {
                 assertEquals(book().sourceUrl, dao.getBook(book().id)?.sourceUrl)
                 assertEquals(book().coverUrl, repository.getBook(book().id)?.coverUrl)
                 assertEquals(book().coverReferer, repository.getBook(book().id)?.coverReferer)
+                assertEquals(book().description, repository.getBook(book().id)?.description)
+                assertEquals(book().language, repository.getBook(book().id)?.language)
                 assertEquals("/s04/999/track-01.mp3", dao.getTracks(book().id).single().providerTrackRef)
                 assertEquals(2, dao.observeBooks().first().size)
                 assertEquals("https://library.example/mobapp", dao.getTracks(book().id).single().streamReferer)
@@ -328,6 +330,93 @@ class OnlineBookStorageTest {
     }
 
     @Test
+    fun versionFiveMigrationAddsNullableDetailsAndRetainsRemovedSourcesAndListeningData() = runTest {
+        val name = "migration-details-v5-test.db"
+        context.deleteDatabase(name)
+        try {
+            val schema = JSONObject(instrumentation.context.assets.open(
+                "io.github.drolevar.audiotales.data.local.AudioTalesDatabase/5.json",
+            ).bufferedReader().use { it.readText() }).getJSONObject("database")
+            SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), null).use { old ->
+                val entities = schema.getJSONArray("entities")
+                for (i in 0 until entities.length()) {
+                    val entity = entities.getJSONObject(i)
+                    fun sql(text: String) = text.replace("\${TABLE_NAME}", entity.getString("tableName"))
+                    old.execSQL(sql(entity.getString("createSql")))
+                    val indices = entity.optJSONArray("indices") ?: continue
+                    for (j in 0 until indices.length()) old.execSQL(sql(indices.getJSONObject(j).getString("createSql")))
+                }
+                old.execSQL("INSERT INTO online_libraries VALUES ('library', 'https://library.example/', 'My library', 'PARTNER', 0, 0)")
+                old.execSQL("INSERT INTO books VALUES ('saved', 'Saved book', 'Author', 'library', '42', 'https://library.example/', 'https://covers.example/book.jpg', 'https://library.example/')")
+                old.execSQL("INSERT INTO tracks VALUES ('track', 'saved', 'Chapter', 'https://cdn.example/book.mp3', 0, 100000, '/book.mp3', 'https://library.example/mobapp', 'https://library.example/')")
+                old.execSQL("INSERT INTO playback_progress VALUES ('saved', 'track', 45000, 10000)")
+                old.execSQL("INSERT INTO bookmarks VALUES ('mark', 'saved', 'track', 15000, 'Keep this', 9000)")
+                old.version = 5
+            }
+            val database = openDatabase(name)
+            try {
+                val dao = database.libraryDao()
+                assertEquals(BookEntity("saved", "Saved book", "Author", "library", "42", "https://library.example/",
+                    "https://covers.example/book.jpg", "https://library.example/"), dao.getBook("saved"))
+                assertNull(dao.getBook("saved")?.description)
+                assertNull(dao.getBook("saved")?.language)
+                assertEquals(TrackEntity("track", "saved", "Chapter", "https://cdn.example/book.mp3", 0, 100000,
+                    "/book.mp3", "https://library.example/mobapp", "https://library.example/"), dao.getTrack("track"))
+                assertEquals(PlaybackProgressEntity("saved", "track", 45000, 10000), dao.getProgress("saved"))
+                assertEquals(BookmarkEntity("mark", "saved", "track", 15000, "Keep this", 9000),
+                    dao.observeBookmarks("saved").first().single())
+                assertEquals(OnlineLibraryEntity("library", "https://library.example/", "My library", "PARTNER", false, false),
+                    dao.getOnlineLibrary("library"))
+                assertTrue(dao.observeOnlineLibraries().first().isEmpty())
+            } finally { database.close() }
+        } finally { context.deleteDatabase(name) }
+    }
+
+    @Test
+    fun metadataRefreshUpdatesOnlyOptionalDetailsAndArtworkAndPreservesAllListeningState() = runTest {
+        val name = "details-refresh-test.db"
+        context.deleteDatabase(name)
+        val database = openDatabase(name)
+        try {
+            val dao = database.libraryDao()
+            dao.insertOnlineLibrary(OnlineLibraryEntity("org", "https://librivox.org/", "My classics", "LIBRIVOX", false, false))
+            val repository = RoomLibraryRepository(dao)
+            val original = book().copy(providerId = "org", description = null, language = null)
+            repository.addOnlineBook(original)
+            val track = original.tracks.single()
+            dao.saveProgress(PlaybackProgressEntity(original.id, track.id, 45000, 10000))
+            dao.insertBookmark(BookmarkEntity("mark", original.id, track.id, 15000, "Keep this", 9000))
+            val before = requireNotNull(dao.getBook(original.id))
+            val tracks = dao.getTracks(original.id)
+            val progress = dao.getProgress(original.id)
+            val marks = dao.observeBookmarks(original.id).first()
+            var requests = 0
+            var response = """{"books":[{"id":"123","title":"Changed title","description":"<p>Real &amp; clean</p>",
+                "language":"English","coverart_jpg":"https://archive.org/new.jpg"}]}"""
+            val online = onlineLibraries(dao) { requests++; response }
+            val updated = online.refreshBookMetadata(original.id)
+            assertEquals(1, requests)
+            assertEquals(before.copy(description = "Real & clean", language = "English",
+                coverUrl = "https://archive.org/new.jpg", coverReferer = null), dao.getBook(original.id))
+            assertEquals("Real & clean", updated?.description)
+            assertEquals("English", repository.observeBooks().first().single().language)
+            assertEquals("Real & clean", repository.observeCollection().first().single().book.description)
+            response = """{"books":[{"id":"123","title":"Changed title","coverart_jpg":"file:///bad.jpg"}]}"""
+            assertEquals(updated, online.refreshBookMetadata(original.id))
+            response = """{"books":[{"id":"123","title":"Changed title","description":""}]}"""
+            assertEquals("", online.refreshBookMetadata(original.id)?.description)
+            assertEquals(0, dao.updateBookMetadata(original.id, "other", "123", "Wrong", "Wrong", null, null))
+            assertEquals(tracks, dao.getTracks(original.id))
+            assertEquals(progress, dao.getProgress(original.id))
+            assertEquals(marks, dao.observeBookmarks(original.id).first())
+            assertEquals(3, requests)
+        } finally {
+            database.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
     fun sourceRefreshPreservesIdentityAndHistoryAndRejectsChangedTrackSets() = runTest {
         val name = "refresh-source-test.db"
         context.deleteDatabase(name)
@@ -372,7 +461,7 @@ class OnlineBookStorageTest {
             try {
                 val dao = database.libraryDao()
                 val repository = RoomLibraryRepository(dao)
-                val original = book().copy(coverUrl = null, coverReferer = null)
+                val original = book().copy(coverUrl = null, coverReferer = null, description = null, language = null)
                 val outcomes = List(8) {
                     async(Dispatchers.IO) { repository.addOnlineBook(original) }
                 }.awaitAll()
@@ -385,6 +474,8 @@ class OnlineBookStorageTest {
                     title = "A changed title",
                     coverUrl = "https://covers.example/new.jpg",
                     coverReferer = "https://library.example/",
+                    description = "Verified description",
+                    language = "English",
                     sourceUrl = "https://audioknigi.com.ua/audio-123-new-slug",
                     tracks = listOf(track.copy(uri = "https://changed.redirectto.cc/changed.mp3")),
                 )
@@ -393,6 +484,11 @@ class OnlineBookStorageTest {
                 assertEquals(original.title, result.book.title)
                 assertEquals(duplicate.coverUrl, result.book.coverUrl)
                 assertEquals(duplicate.coverReferer, result.book.coverReferer)
+                assertEquals(duplicate.description, result.book.description)
+                assertEquals(duplicate.language, result.book.language)
+                val withoutDetails = repository.addOnlineBook(duplicate.copy(description = null, language = null)).book
+                assertEquals(duplicate.description, withoutDetails.description)
+                assertEquals(duplicate.language, withoutDetails.language)
                 // Neither absent nor invalid optional artwork can clear a known cover.
                 assertEquals(duplicate.coverUrl, repository.addOnlineBook(duplicate.copy(coverUrl = null, coverReferer = null)).book.coverUrl)
                 assertEquals(duplicate.coverUrl, repository.addOnlineBook(duplicate.copy(coverUrl = "file:///bad.jpg")).book.coverUrl)
@@ -408,6 +504,8 @@ class OnlineBookStorageTest {
                 assertEquals("Книга", reopened.libraryDao().getBook(book().id)?.title)
                 assertEquals("https://covers.example/new.jpg", reopened.libraryDao().getBook(book().id)?.coverUrl)
                 assertEquals("https://library.example/", reopened.libraryDao().getBook(book().id)?.coverReferer)
+                assertEquals("Verified description", reopened.libraryDao().getBook(book().id)?.description)
+                assertEquals("English", reopened.libraryDao().getBook(book().id)?.language)
                 assertEquals(1200L, reopened.libraryDao().getProgress(book().id)?.positionMs)
             } finally {
                 reopened.close()
@@ -481,7 +579,7 @@ class OnlineBookStorageTest {
     private fun openDatabase(name: String): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, name)
             .setDriver(AndroidSQLiteDriver())
-            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5)
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6)
             .build()
 
     private fun book() = ResolvedOnlineBook(
@@ -493,6 +591,8 @@ class OnlineBookStorageTest {
         author = "Автор",
         coverUrl = "https://covers.example/original.jpg",
         coverReferer = "https://library.example/",
+        description = "Saved provider description",
+        language = "English",
         tracks = listOf(LibraryTrack(
             id = "stable-track-id",
             bookId = "audioknigi-123",

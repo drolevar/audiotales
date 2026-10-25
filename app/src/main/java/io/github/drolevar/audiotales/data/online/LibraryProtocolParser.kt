@@ -73,7 +73,7 @@ internal object LibraryProtocolParser {
         return CatalogueBook(
             source.id, requireId(item.requiredText("id")), title(item.requiredText("namebook")),
             item.text("author")?.let { clean(it, 1000) },
-            clean(item.text("short_story").orEmpty(), 100_000), cover, null, source.baseUrl,
+            item.text("short_story")?.let { clean(it, 100_000) }, cover, null, source.baseUrl,
         )
     }
 
@@ -99,7 +99,8 @@ internal object LibraryProtocolParser {
                 providerTrackRef = reference, streamReferer = source.baseUrl + "mobapp", downloadReferer = source.baseUrl,
             )
         }
-        return ResolvedOnlineBook(id, source.id, book.remoteId, source.baseUrl, book.title, book.author, tracks, book.coverUrl, book.coverReferer)
+        return ResolvedOnlineBook(id, source.id, book.remoteId, source.baseUrl, book.title, book.author, tracks,
+            book.coverUrl, book.coverReferer, description = book.description)
     }
 
     /** The artwork lookup validates one provider record without requiring a playlist or sections. */
@@ -136,7 +137,8 @@ internal object LibraryProtocolParser {
                 durationMs = seconds?.times(1000), providerTrackRef = ref,
             )
         }
-        return ResolvedOnlineBook(id, source.id, remoteId, book.sourceUrl ?: unexpectedProtocol(), book.title, book.author, tracks, book.coverUrl, book.coverReferer)
+        return ResolvedOnlineBook(id, source.id, remoteId, book.sourceUrl ?: unexpectedProtocol(), book.title, book.author, tracks,
+            book.coverUrl, book.coverReferer, description = book.description, language = book.language)
     }
 
     private fun librivoxBook(source: OnlineLibrary, item: JsonObject): CatalogueBook {
@@ -150,7 +152,7 @@ internal object LibraryProtocolParser {
         val page = item.text("url_librivox")?.takeIf { it.isNotBlank() }?.let(::httpsUrl)
         if (page != null && page.host != source.baseUrl.toHttpUrlOrNull()?.host) unexpectedProtocol()
         return CatalogueBook(source.id, requireId(item.requiredText("id")), title(item.requiredText("title")),
-            author?.let { clean(it, 1000) }, clean(item.text("description").orEmpty(), 100_000),
+            author?.let { clean(it, 1000) }, item.text("description")?.let { clean(it, 100_000) },
             item.text("coverart_jpg")?.let(::optionalImage)
                 ?: item.text("coverart_thumbnail")?.let(::optionalImage), page?.toString(),
             language = item.text("language")?.let { clean(it, 1000) }?.takeIf { it.isNotBlank() })

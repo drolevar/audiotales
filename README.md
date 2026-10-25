@@ -9,6 +9,7 @@ An audiobook player for Android, built for discovering books in online libraries
 - Add compatible online libraries by their website addresses, choose which to search, browse results by library, and save books to My books.
 - Browse a library separately, rename it, share its address, or remove it from Browse while keeping your saved books and downloads.
 - See book covers in the catalogue, your saved collection and the player.
+- Read book descriptions and inspect the track list before saving. Saved descriptions and track lists remain available offline.
 - Filter saved books by listening or download state, and sort by recent listening, title or author.
 - Listen with play/pause, seeking, speed and track controls, and resume your saved position.
 - Download a book for offline listening. Manage downloads from My books or Settings, pause or resume transfers, and remove downloaded audio while keeping the book and listening position.

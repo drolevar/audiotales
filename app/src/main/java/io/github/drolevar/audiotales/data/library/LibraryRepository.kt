@@ -11,6 +11,8 @@ data class LibraryBook(
     val sourceUrl: String? = null,
     val coverUrl: String? = null,
     val coverReferer: String? = null,
+    val description: String? = null,
+    val language: String? = null,
 )
 
 data class LibraryTrack(
@@ -59,6 +61,8 @@ data class ResolvedOnlineBook(
     val tracks: List<LibraryTrack>,
     val coverUrl: String? = null,
     val coverReferer: String? = null,
+    val description: String? = null,
+    val language: String? = null,
 )
 
 data class LibraryAddition(val book: LibraryBook, val added: Boolean)
