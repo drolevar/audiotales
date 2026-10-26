@@ -36,11 +36,15 @@ class MediaStorage @Inject constructor(@ApplicationContext context: Context) {
     private val json = Json { ignoreUnknownKeys = true }
 
     private fun upstream(download: Boolean): DataSource.Factory = ResolvingDataSource.Factory(
-        DefaultHttpDataSource.Factory()
-            .setUserAgent("AudioTales")
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(20_000)
-            .setAllowCrossProtocolRedirects(false),
+        DataSource.Factory {
+            val http = DefaultHttpDataSource.Factory()
+                .setUserAgent("AudioTales")
+                .setConnectTimeoutMs(15_000)
+                .setReadTimeoutMs(20_000)
+                .setAllowCrossProtocolRedirects(false)
+                .createDataSource()
+            if (download) DownloadHttpDataSource(http) else http
+        },
     ) { spec ->
         val key = spec.key
         val saved = key?.let { index.getDownload(it)?.request?.data }?.let(::readMetadata)
