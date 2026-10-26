@@ -172,6 +172,8 @@ class BookPlayerViewModelTest {
     }
 
     private class FakeOnline : OnlineBookDetailsSource {
+        override suspend fun inspectBookMetadata(libraryId: String, remoteId: String): LibraryBook = error("unused")
+        override suspend fun inspectBookAudio(book: LibraryBook): ResolvedOnlineBook = error("unused")
         var sourceCalls = 0
         var sourceRefresh: suspend () -> Unit = {}
         var metadataRefresh: suspend () -> LibraryBook? = { book }

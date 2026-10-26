@@ -18,6 +18,8 @@ internal data class BookDetailsUiState(
     val tracks: List<LibraryTrack> = emptyList(),
     val progress: ListeningProgress? = null,
     val saved: Boolean = false,
+    val audioLoading: Boolean = false,
+    val audioFailed: Boolean = false,
     val sourceName: String? = null,
     val loading: Boolean = true,
     val loadFailed: Boolean = false,
@@ -30,6 +32,7 @@ internal data class BookDetailsUiState(
     val actionError: DetailsActionError? = null,
     val downloads: Map<String, TrackDownloadState> = emptyMap(),
 ) {
+    val audioReady get() = !audioLoading && !audioFailed && tracks.isNotEmpty()
     val download get() = summarizeBookDownloads(tracks.map { it.id }, downloads)
 }
 
@@ -66,6 +69,7 @@ internal class BookDetailsViewModel internal constructor(
     private var generation = 0L
     private var visible: Job? = null
     private var metadata: Job? = null
+    private var audio: Job? = null
     private var downloadObservation: Job? = null
     private var action: Job? = null
     private var active = false
@@ -84,26 +88,15 @@ internal class BookDetailsViewModel internal constructor(
                 // Render saved state before any optional network or download initialization.
                 val collection = library.observeCollection().first()
                 ensureCurrent(token)
-                val saved = findSaved(collection)
-                if (saved != null) publish(saved)
-                else if (_state.value.book == null) {
-                    val source = requireNotNull(input.libraryId)
-                    val remote = requireNotNull(input.remoteId)
-                    val inspected = online.inspectBook(source, remote)
-                    ensureCurrent(token)
-                    // Saving elsewhere while inspection runs must win over the inspection snapshot.
-                    val canonical = findSaved(library.observeCollection().first())
-                    if (canonical != null) publish(canonical) else _state.update { it.copy(
-                        book = inspected.asLibraryBook(), tracks = inspected.tracks.sortedBy { track -> track.sequenceIndex },
-                        saved = false, loading = false, loadFailed = false,
-                    ) }
-                }
+                reconcileCollection(collection)
+                if (_state.value.book == null) startMetadata(initial = true)
+                else if (!_state.value.audioReady && !_state.value.audioFailed) retryAudio()
                 supervisorScope {
                     launch {
                         try {
                             library.observeCollection().collect { entries ->
                                 ensureCurrent(token)
-                                findSaved(entries)?.let(::publish)
+                                reconcileCollection(entries)
                             }
                         } catch (cancelled: CancellationException) { throw cancelled
                         } catch (_: Exception) { ensureCurrent(token); _state.update { it.copy(collectionFailed = true) } }
@@ -133,17 +126,40 @@ internal class BookDetailsViewModel internal constructor(
         generation++
         visible?.cancel(); visible = null
         metadata?.cancel(); metadata = null
+        audio?.cancel(); audio = null
         downloadObservation?.cancel(); downloadObservation = null
         action?.cancel(); action = null
-        _state.update { it.copy(busy = false, refreshing = false) }
+        _state.update { it.copy(busy = false, refreshing = false, audioLoading = false) }
     }
 
     fun retry() { val input = target ?: return; deactivate(); activate(input) }
 
-    fun refreshDetails() {
+    fun retryAudio() {
+        val book = _state.value.book ?: return
+        if (!active || _state.value.saved || audio?.isActive == true || providerTarget() == null) return
+        val token = generation
+        _state.update { it.copy(audioLoading = true, audioFailed = false) }
+        audio = viewModelScope.launch {
+            try {
+                val resolved = online.inspectBookAudio(book)
+                ensureCurrent(token)
+                val canonical = reconcileCollection(library.observeCollection().first())
+                if (canonical != null) return@launch
+                ensureCurrent(token)
+                check(resolved.tracks.isNotEmpty())
+                // Audio resolution owns only tracks; a newer metadata response must remain visible.
+                _state.update { it.copy(tracks = resolved.tracks.sortedBy { track -> track.sequenceIndex }, audioLoading = false, audioFailed = false) }
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (_: Exception) { ensureCurrent(token); _state.update { it.copy(audioLoading = false, audioFailed = true) } }
+        }
+    }
+
+    fun refreshDetails() = startMetadata(initial = _state.value.book == null)
+
+    private fun startMetadata(initial: Boolean) {
         if (!active || metadata?.isActive == true) return
         val token = generation
-        _state.update { it.copy(refreshing = true, metadataFailed = false) }
+        _state.update { if (initial) it.copy(loading = true, loadFailed = false) else it.copy(refreshing = true, metadataFailed = false) }
         metadata = viewModelScope.launch {
             try {
                 val input = _state.value
@@ -151,18 +167,27 @@ internal class BookDetailsViewModel internal constructor(
                 if (input.saved && book != null) {
                     val refreshed = online.refreshBookMetadata(book.id)
                     ensureCurrent(token)
-                    if (refreshed != null) _state.update { it.copy(book = refreshed) }
+                    val canonical = reconcileCollection(library.observeCollection().first())
+                    ensureCurrent(token)
+                    if (canonical?.book?.id == book.id && refreshed?.id == book.id) _state.update { it.copy(book = refreshed) }
                 } else {
-                    val request = requireNotNull(target)
-                    val refreshed = online.inspectBook(requireNotNull(request.libraryId), requireNotNull(request.remoteId))
+                    val request = requireNotNull(providerTarget())
+                    val refreshed = online.inspectBookMetadata(requireNotNull(request.libraryId), requireNotNull(request.remoteId))
                     ensureCurrent(token)
-                    val canonical = findSaved(library.observeCollection().first())
+                    val canonical = reconcileCollection(library.observeCollection().first())
                     ensureCurrent(token)
-                    if (canonical != null) publish(canonical) else _state.update { it.copy(book = refreshed.asLibraryBook(), tracks = refreshed.tracks.sortedBy { track -> track.sequenceIndex }) }
+                    if (canonical == null) {
+                        _state.update { it.copy(book = refreshed, loading = false, loadFailed = false) }
+                        if (initial) retryAudio()
+                    }
                 }
                 _state.update { it.copy(refreshing = false) }
             } catch (cancelled: CancellationException) { throw cancelled
-            } catch (_: Exception) { ensureCurrent(token); _state.update { it.copy(refreshing = false, metadataFailed = true) } }
+            } catch (_: Exception) {
+                ensureCurrent(token)
+                _state.update { if (initial && it.book == null) it.copy(loading = false, loadFailed = true)
+                    else it.copy(refreshing = false, metadataFailed = true) }
+            }
         }
     }
 
@@ -226,7 +251,7 @@ internal class BookDetailsViewModel internal constructor(
     }
 
     private fun perform(error: DetailsActionError, block: suspend () -> Unit) {
-        if (!active || _state.value.busy || _state.value.book == null) return
+        if (!active || _state.value.busy || _state.value.book == null || !_state.value.audioReady) return
         val token = generation
         _state.update { it.copy(busy = true, actionError = null) }
         action = viewModelScope.launch {
@@ -238,17 +263,45 @@ internal class BookDetailsViewModel internal constructor(
 
     private suspend fun ensureSaved(): LibraryCollectionEntry {
         val token = generation
-        val existing = findSaved(library.observeCollection().first())
+        val collection = library.observeCollection().first()
         ensureCurrent(token)
-        if (existing != null) { publish(existing); return existing }
-        val input = requireNotNull(target)
-        val result = online.saveBook(requireNotNull(input.libraryId), requireNotNull(input.remoteId))
+        val existing = reconcileCollection(collection)
         ensureCurrent(token)
-        // Duplicate saves can return a different canonical ID and a different stored playlist.
-        val entry = LibraryCollectionEntry(result.book, library.getTracks(result.book.id).sortedBy { it.sequenceIndex }, library.getProgress(result.book.id))
+        if (existing != null) return existing
+        val input = requireNotNull(providerTarget())
+        online.saveBook(requireNotNull(input.libraryId), requireNotNull(input.remoteId))
         ensureCurrent(token)
-        publish(entry)
+        // The save response may predate removal. Only current collection membership is authoritative.
+        val savedCollection = library.observeCollection().first()
+        ensureCurrent(token)
+        val entry = requireNotNull(reconcileCollection(savedCollection))
+        ensureCurrent(token)
         return entry
+    }
+    private fun providerTarget(): BookDetailsTarget? {
+        val input = target ?: return null
+        val book = _state.value.book
+        return BookDetailsTarget(
+            libraryId = input.libraryId ?: book?.providerId ?: return null,
+            remoteId = input.remoteId ?: book?.providerBookId ?: return null,
+        )
+    }
+    private fun reconcileCollection(entries: List<LibraryCollectionEntry>): LibraryCollectionEntry? {
+        val saved = findSaved(entries)
+        if (saved != null) publish(saved)
+        else if (_state.value.saved) {
+            // Full removal invalidates listening history; provider metadata may remain for inspection.
+            val canResolve = providerTarget() != null
+            metadata?.cancel(); metadata = null
+            audio?.cancel(); audio = null
+            action?.cancel(); action = null
+            _state.update { it.copy(
+                book = it.book.takeIf { canResolve }, tracks = if (canResolve) it.tracks else emptyList(),
+                progress = null, saved = false, loading = false, loadFailed = !canResolve, busy = false,
+                collectionFailed = false, refreshing = false, metadataFailed = false, audioLoading = false, audioFailed = false,
+            ) }
+        }
+        return saved
     }
     private fun findSaved(entries: List<LibraryCollectionEntry>): LibraryCollectionEntry? {
         val input = target ?: return null
@@ -259,7 +312,10 @@ internal class BookDetailsViewModel internal constructor(
                     entry.book.providerBookId == (input.remoteId ?: book?.providerBookId))
         }
     }
-    private fun publish(entry: LibraryCollectionEntry) { _state.update { it.copy(book = entry.book, tracks = entry.tracks.sortedBy { track -> track.sequenceIndex }, progress = entry.progress, saved = true, loading = false, loadFailed = false, collectionFailed = false) } }
+    private fun publish(entry: LibraryCollectionEntry) {
+        audio?.cancel(); audio = null
+        _state.update { it.copy(book = entry.book, tracks = entry.tracks.sortedBy { track -> track.sequenceIndex }, progress = entry.progress,
+            saved = true, loading = false, loadFailed = false, collectionFailed = false, audioLoading = false, audioFailed = false) }
+    }
     private suspend fun ensureCurrent(token: Long) { currentCoroutineContext().ensureActive(); check(active && generation == token) }
 }
-private fun ResolvedOnlineBook.asLibraryBook() = LibraryBook(id, title, author, providerId, providerBookId, sourceUrl, coverUrl, coverReferer, description, language)

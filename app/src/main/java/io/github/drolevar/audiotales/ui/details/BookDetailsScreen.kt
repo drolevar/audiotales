@@ -59,6 +59,7 @@ internal fun BookDetailsRoute(
     BookDetailsScreen(
         state = state, playbackAvailable = controller != null,
         onBack = { viewModel.deactivate(); onBack() }, onRetry = viewModel::retry, onRefresh = viewModel::refreshDetails,
+        onRetryAudio = viewModel::retryAudio,
         playbackFailed = playback.connection == PlaybackConnectionStatus.FAILED,
         onRetryPlayback = connection::connect,
         onSave = viewModel::save,
@@ -96,6 +97,7 @@ internal fun BookDetailsScreen(
     onRemoveDownloads: () -> Unit,
     onDismissError: () -> Unit,
     onShare: () -> Unit,
+    onRetryAudio: () -> Unit,
     modifier: Modifier = Modifier,
     playbackFailed: Boolean = false,
     onRetryPlayback: () -> Unit = {},
@@ -115,7 +117,7 @@ internal fun BookDetailsScreen(
                         IconButton(onClick = { menu = true }) { Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.book_details_options)) }
                         DropdownMenu(menu, onDismissRequest = { menu = false }) {
                             if (!state.saved && book != null) DropdownMenuItem(
-                                text = { Text(stringResource(R.string.book_details_save)) }, enabled = !state.busy,
+                                text = { Text(stringResource(R.string.book_details_save)) }, enabled = !state.busy && state.audioReady,
                                 onClick = { menu = false; onSave() },
                             )
                             DropdownMenuItem(text = { Text(stringResource(R.string.book_details_refresh)) }, enabled = !state.refreshing && !state.busy, onClick = { menu = false; if (book == null) onRetry() else onRefresh() })
@@ -150,12 +152,12 @@ internal fun BookDetailsScreen(
                     }
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = onListen, enabled = !state.busy && state.tracks.isNotEmpty() && playbackAvailable, modifier = Modifier.weight(1f).widthIn(min = 144.dp * LocalDensity.current.fontScale).heightIn(min = 48.dp)) {
+                    Button(onClick = onListen, enabled = !state.busy && state.audioReady && playbackAvailable, modifier = Modifier.weight(1f).widthIn(min = 144.dp * LocalDensity.current.fontScale).heightIn(min = 48.dp)) {
                         Icon(painterResource(R.drawable.ic_play), null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(if (state.progress != null) R.string.book_details_resume else R.string.book_details_listen))
                     }
-                    OutlinedButton(onClick = onDownload, enabled = !state.busy && state.tracks.isNotEmpty() && !state.download.removing && (state.downloadsReady || state.downloadsFailed), modifier = Modifier.weight(1f).widthIn(min = 144.dp * LocalDensity.current.fontScale).heightIn(min = 48.dp)) {
+                    OutlinedButton(onClick = onDownload, enabled = !state.busy && state.audioReady && !state.download.removing && (state.downloadsReady || state.downloadsFailed), modifier = Modifier.weight(1f).widthIn(min = 144.dp * LocalDensity.current.fontScale).heightIn(min = 48.dp)) {
                         Icon(painterResource(when { state.download.complete -> R.drawable.ic_download_done; state.download.active -> R.drawable.ic_pause; state.download.hasFailures -> R.drawable.ic_refresh; else -> R.drawable.ic_download }), null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(stringResource(when {
@@ -187,12 +189,21 @@ internal fun BookDetailsScreen(
                 }
                 ListItem(
                     headlineContent = { Text(stringResource(R.string.book_details_tracks), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 22.sp)) },
-                    supportingContent = { Text(pluralStringResource(R.plurals.book_details_track_count, state.tracks.size, state.tracks.size)) },
+                    supportingContent = {
+                        when {
+                            state.audioReady -> Text(pluralStringResource(R.plurals.book_details_track_count, state.tracks.size, state.tracks.size))
+                            state.audioLoading -> Text(stringResource(R.string.book_details_audio_loading))
+                            state.audioFailed -> Text(stringResource(R.string.book_details_audio_failed), color = MaterialTheme.colorScheme.error, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite })
+                            else -> Text(stringResource(R.string.book_details_audio_unresolved))
+                        }
+                    },
                     leadingContent = { Icon(painterResource(R.drawable.ic_tracks), null) },
-                    trailingContent = { Icon(painterResource(R.drawable.ic_chevron_down), null, Modifier.graphicsLayer { rotationZ = -90f }) },
-                    modifier = Modifier.fillMaxWidth().clickable(enabled = state.tracks.isNotEmpty(), role = Role.Button) { tracksVisible = true },
+                    trailingContent = { if (state.audioReady) Icon(painterResource(R.drawable.ic_chevron_down), null, Modifier.graphicsLayer { rotationZ = -90f }) },
+                    modifier = Modifier.fillMaxWidth().clickable(enabled = state.audioReady, role = Role.Button) { tracksVisible = true },
                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surface),
                 )
+                if (state.audioLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+                if (state.audioFailed) TextButton(onClick = onRetryAudio, enabled = !state.busy) { Text(stringResource(R.string.book_details_retry_audio)) }
                 HorizontalDivider()
                 Text(stringResource(R.string.book_details_description), style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Medium), modifier = Modifier.semantics { heading() })
                 Text(book.description?.takeIf(String::isNotBlank) ?: stringResource(R.string.book_details_no_description), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -207,7 +218,7 @@ internal fun BookDetailsScreen(
             }
         }
     }
-    if (tracksVisible) ModalBottomSheet(onDismissRequest = { tracksVisible = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    if (tracksVisible && state.audioReady) ModalBottomSheet(onDismissRequest = { tracksVisible = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Text(stringResource(R.string.book_details_tracks), Modifier.padding(horizontal = 24.dp, vertical = 8.dp).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
         if (!state.saved) Text(stringResource(R.string.book_details_track_saves), Modifier.padding(horizontal = 24.dp), style = MaterialTheme.typography.bodySmall)
         LazyColumn(Modifier.fillMaxWidth().navigationBarsPadding(), contentPadding = PaddingValues(bottom = 24.dp)) {

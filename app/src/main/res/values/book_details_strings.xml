@@ -26,6 +26,10 @@
     <string name="book_details_play_failed">Couldn’t start playback. Try Listen again.</string>
     <string name="book_details_download_failed">Couldn’t update downloads. Check your connection and try again.</string>
     <string name="book_details_tracks">Tracks</string>
+    <string name="book_details_audio_loading">Loading audio…</string>
+    <string name="book_details_audio_failed">Couldn’t load audio.</string>
+    <string name="book_details_audio_unresolved">Audio not loaded.</string>
+    <string name="book_details_retry_audio">Retry audio</string>
     <plurals name="book_details_track_count"><item quantity="one">%d track</item><item quantity="other">%d tracks</item></plurals>
     <string name="book_details_description">Description</string>
     <string name="book_details_no_description">No description available.</string>

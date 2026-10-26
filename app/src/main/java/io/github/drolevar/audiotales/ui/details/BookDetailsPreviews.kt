@@ -19,7 +19,7 @@ private fun BookDetailsPreview() {
                 sourceName = "Example library", saved = true, loading = false, downloadsReady = true,
             ),
             playbackAvailable = true, onBack = {}, onRetry = {}, onRefresh = {}, onSave = {},
-            onListen = {}, onTrack = {}, onDownload = {}, onRemoveDownloads = {}, onDismissError = {}, onShare = {},
+            onListen = {}, onTrack = {}, onDownload = {}, onRemoveDownloads = {}, onDismissError = {}, onShare = {}, onRetryAudio = {},
         )
     }
 }

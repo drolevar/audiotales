@@ -48,11 +48,14 @@ data class CataloguePage(val books: List<CatalogueBook>, val nextOffset: Int?)
 
 /** Library instances are persisted separately from the protocol used to communicate with them. */
 @Singleton
-internal class OnlineLibraries @Inject constructor(
+internal class OnlineLibraries internal constructor(
     private val dao: LibraryDao,
     private val library: LibraryRepository,
     private val http: ProviderHttpClient,
+    private val partnerClientQuery: String,
 ) : OnlineCatalogue, OnlineBookDetailsSource {
+    @Inject constructor(dao: LibraryDao, library: LibraryRepository, http: ProviderHttpClient) :
+        this(dao, library, http, BuildConfig.PARTNER_CLIENT_QUERY)
     private val artworkRefreshMutex = Mutex()
     // Rotate within this application process, including past permanently coverless records.
     private var artworkRefreshCursor: String? = null
@@ -90,6 +93,25 @@ internal class OnlineLibraries @Inject constructor(
     override suspend fun inspectBook(libraryId: String, remoteId: String): ResolvedOnlineBook = withContext(Dispatchers.IO) {
         LibraryProtocolParser.requireId(remoteId)
         resolve(getLibrary(libraryId), remoteId)
+    }
+
+    override suspend fun inspectBookMetadata(libraryId: String, remoteId: String): LibraryBook = withContext(Dispatchers.IO) {
+        LibraryProtocolParser.requireId(remoteId)
+        val source = getLibrary(libraryId)
+        val details = metadata(source, remoteId)
+        LibraryBook("${source.id}:$remoteId", details.title, details.author, source.id, remoteId,
+            details.sourceUrl ?: source.baseUrl, details.coverUrl, details.coverReferer, details.description, details.language)
+    }
+
+    override suspend fun inspectBookAudio(book: LibraryBook): ResolvedOnlineBook = withContext(Dispatchers.IO) {
+        val remoteId = LibraryProtocolParser.requireId(book.providerBookId ?: unexpectedProtocol())
+        val source = getLibrary(book.providerId ?: unsupportedLibrary())
+        // Provider identity selects transport. A historical saved ID or caller URL is not authority.
+        when (source.protocol) {
+            LibraryProtocol.PARTNER -> resolvePartnerAudio(source, CatalogueBook(source.id, remoteId,
+                book.title, book.author, book.description, book.coverUrl, source.baseUrl, book.coverReferer, book.language))
+            LibraryProtocol.LIBRIVOX -> resolveLibrivox(source, remoteId)
+        }
     }
 
     override suspend fun setLibrarySelected(id: String, selected: Boolean): Unit = withContext(Dispatchers.IO) {
@@ -259,7 +281,11 @@ internal class OnlineLibraries @Inject constructor(
 
     private suspend fun resolvePartner(source: OnlineLibrary, id: String): ResolvedOnlineBook {
         val book = metadata(source, id)
-        val story = http.get(partnerUrl(source, "story").addQueryParameter("storyid", id).build(), 1_048_576)
+        return resolvePartnerAudio(source, book)
+    }
+
+    private suspend fun resolvePartnerAudio(source: OnlineLibrary, book: CatalogueBook): ResolvedOnlineBook {
+        val story = http.get(partnerUrl(source, "story").addQueryParameter("storyid", book.remoteId).build(), 1_048_576)
         val playlistUrl = LibraryProtocolParser.httpsUrl(LibraryProtocolParser.objectValue(story).requiredText("file"))
         val playlist = http.get(playlistUrl, 2_097_152, source.baseUrl)
         return LibraryProtocolParser.partnerResolution(source, book, playlist)
@@ -272,7 +298,7 @@ internal class OnlineLibraries @Inject constructor(
     }
 
     private fun partnerUrl(source: OnlineLibrary, operation: String): HttpUrl.Builder {
-        val query = BuildConfig.PARTNER_CLIENT_QUERY
+        val query = partnerClientQuery
         if (query.isBlank()) throw OnlineBookException(OnlineBookError.ACCESS_NOT_CONFIGURED)
         // Configure the protocol's client parameter locally; never include it in source URLs or errors.
         return source.baseUrl.toHttpUrl().resolve("api")!!.newBuilder()

@@ -17,6 +17,68 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 class OnlineBookDetailsSourceTest {
+    @Test fun metadataInspectionMakesOneNarrowRequestAndNeverReadsOrWritesSavedMedia() = runTest {
+        val fixture = Fixture(fullBook)
+        val result = fixture.source.inspectBookMetadata("org", "42")
+        assertEquals("org:42", result.id)
+        assertEquals("Remote title", result.title)
+        assertEquals("A & B", result.description)
+        assertEquals("org", result.providerId)
+        assertEquals("42", result.providerBookId)
+        assertNull(fixture.requests.single().queryParameter("extended"))
+        assertEquals(0, fixture.bookReads)
+        assertEquals(0, fixture.updates)
+    }
+
+    @Test fun audioInspectionUsesRegisteredProviderIdentityAndCanonicalTracksForHistoricalSavedId() = runTest {
+        val fixture = Fixture(fullBook)
+        val result = fixture.source.inspectBookAudio(fixture.book.copy(sourceUrl = "https://attacker.example/arbitrary"))
+        assertEquals("org:42", result.id)
+        assertEquals("org:42", result.tracks.single().bookId)
+        assertEquals("librivox.org", fixture.requests.single().host)
+        assertEquals("42", fixture.requests.single().queryParameter("id"))
+        assertEquals("1", fixture.requests.single().queryParameter("extended"))
+        assertEquals(0, fixture.bookReads)
+        assertEquals(0, fixture.updates)
+    }
+
+    @Test fun invalidAudioProviderIdentityCannotIssueNetworkRequestsOrAccessSavedMedia() = runTest {
+        val fixture = Fixture(fullBook)
+        for (book in listOf(fixture.book.copy(providerId = "unknown"), fixture.book.copy(providerId = null),
+            fixture.book.copy(providerBookId = "../42"), fixture.book.copy(providerBookId = null))) {
+            try {
+                fixture.source.inspectBookAudio(book)
+                fail("Invalid provider identity must fail")
+            } catch (_: OnlineBookException) { /* Expected. */ }
+        }
+        assertEquals(0, fixture.requests.size)
+        assertEquals(0, fixture.bookReads)
+        assertEquals(0, fixture.updates)
+    }
+
+    @Test fun partnerAudioRetryReusesMetadataAndNeverRepeatsReviewOrPersists() = runTest {
+        val fixture = Fixture("", partner = true)
+        var playlistAttempts = 0
+        fixture.respond = { url -> when (url.queryParameter("func")) {
+            "review" -> """{"id":"42","namebook":"Partner title","short_story":"Description"}"""
+            "story" -> """{"file":"https://media.example/playlist.json"}"""
+            else -> if (++playlistAttempts == 1) "[]" else """[{"title":"Track","file":"https://media.example/audio.mp3"}]"""
+        } }
+        val metadata = fixture.source.inspectBookMetadata("org", "42")
+        try {
+            fixture.source.inspectBookAudio(metadata)
+            fail("An empty playlist must fail independently")
+        } catch (error: OnlineBookException) { assertEquals(OnlineBookError.EMPTY_PLAYLIST, error.reason) }
+        val result = fixture.source.inspectBookAudio(metadata.copy(id = "historical", sourceUrl = "https://attacker.example/"))
+        assertEquals("org:42", result.id)
+        assertEquals("Partner title", result.title)
+        assertEquals("Description", result.description)
+        assertEquals(listOf("review", "story", null, "story", null), fixture.requests.map { it.queryParameter("func") })
+        assertEquals(listOf("provider.example", "provider.example", "media.example", "provider.example", "media.example"), fixture.requests.map { it.host })
+        assertEquals(0, fixture.bookReads)
+        assertEquals(0, fixture.updates)
+    }
+
     @Test fun inspectionResolvesFullBookWithoutReadingOrSavingLibraryMedia() = runTest {
         val fixture = Fixture(fullBook)
         val result = fixture.source.inspectBook("org", "42")
@@ -67,7 +129,8 @@ class OnlineBookDetailsSourceTest {
         assertEquals(0, fixture.updates)
     }
 
-    private class Fixture(var response: String) {
+    private class Fixture(var response: String, partner: Boolean = false) {
+        var respond: (HttpUrl) -> String = { response }
         var book = LibraryBook("historical-book", "Saved title", "Saved author", "org", "42",
             "https://librivox.org/original/", "https://archive.org/known.jpg", "https://librivox.org/",
             "Saved description", "French")
@@ -84,8 +147,9 @@ class OnlineBookDetailsSourceTest {
         private val dao = Proxy.newProxyInstance(LibraryDao::class.java.classLoader,
             arrayOf(LibraryDao::class.java)) { _, method, args ->
             when (method.name) {
-                "getOnlineLibrary" -> OnlineLibraryEntity("org", "https://librivox.org/", "LibriVox", "LIBRIVOX",
-                    isRegistered = false, isSelected = false)
+                "getOnlineLibrary" -> if (args[0] != "org") null else OnlineLibraryEntity("org",
+                    if (partner) "https://provider.example/" else "https://librivox.org/", "Library",
+                    if (partner) "PARTNER" else "LIBRIVOX", isRegistered = false, isSelected = false)
                 "updateBookMetadata" -> {
                     require(args[0] == book.id && args[1] == book.providerId && args[2] == book.providerBookId)
                     val cover = args[5] as String?
@@ -101,9 +165,9 @@ class OnlineBookDetailsSourceTest {
         private val client = OkHttpClient.Builder().addInterceptor { chain ->
             requests += chain.request().url
             Response.Builder().request(chain.request()).protocol(Protocol.HTTP_1_1).code(200).message("OK")
-                .body(response.toResponseBody()).build()
+                .body(respond(chain.request().url).toResponseBody()).build()
         }.build()
-        val source: OnlineBookDetailsSource = OnlineLibraries(dao, repository, ProviderHttpClient(client))
+        val source: OnlineBookDetailsSource = OnlineLibraries(dao, repository, ProviderHttpClient(client), "client=test-fixture")
     }
 
     companion object {

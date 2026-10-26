@@ -165,6 +165,8 @@ class DownloadsViewModelTest {
     }
 
     private class FakeOnline : OnlineBookDetailsSource {
+        override suspend fun inspectBookMetadata(libraryId: String, remoteId: String): LibraryBook = error("unused")
+        override suspend fun inspectBookAudio(book: LibraryBook): ResolvedOnlineBook = error("unused")
         var refreshSources: suspend () -> Unit = {}
         val refreshedBooks = mutableListOf<String>()
         override suspend fun refreshBookSources(bookId: String) { refreshedBooks += bookId; refreshSources() }
