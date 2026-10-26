@@ -25,11 +25,42 @@
         tools:targetApi="33">
         <activity
             android:name=".MainActivity"
+            android:launchMode="singleTop"
             android:windowSoftInputMode="adjustResize"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="audiotales" />
+            </intent-filter>
+            <!-- User-choice HTTPS handling; no domain association or autoVerify claim. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="audioknigi.com.ua" />
+                <data android:host="akniga.org" />
+                <data android:host="librivox.club" />
+                <data android:path="/api" />
+                <data android:pathPrefix="/audio-" />
+                <data android:pathPrefix="/audio/" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="librivox.org" android:pathPattern="/.*" />
             </intent-filter>
         </activity>
 

@@ -70,7 +70,7 @@ internal class OnlineLibraries internal constructor(
     override suspend fun addLibrary(input: String): OnlineLibrary = withContext(Dispatchers.IO) {
         val base = LibraryProtocolParser.baseUrl(input)
         val id = LibraryProtocolParser.libraryId(base)
-        dao.getOnlineLibraryByBaseUrl(base.toString())?.let {
+        dao.getOnlineLibraryByBaseUrl(base.toString())?.takeIf { it.isRegistered && it.isSelected }?.let {
             return@withContext dao.registerOnlineLibrary(it).toLibrary()
         }
         // LibriVox has a separate documented public protocol. Partner instances share one adapter.
@@ -78,6 +78,7 @@ internal class OnlineLibraries internal constructor(
         val candidate = OnlineLibrary(id, base.toString(), base.host, protocol)
         // Persist only after a correctly shaped catalogue response, never HTTP success alone.
         catalogue(candidate, "", 0)
+        currentCoroutineContext().ensureActive()
         dao.registerOnlineLibrary(OnlineLibraryEntity(id, base.toString(), base.host, protocol.name)).toLibrary()
     }
 
@@ -227,6 +228,24 @@ internal class OnlineLibraries internal constructor(
             match.groupValues[1]
         }
         resolveAndSave(source, remoteId, if (source.protocol == LibraryProtocol.LIBRIVOX) url.toString() else null)
+    }
+
+    /** Resolve a validated LibriVox page to provider identity without saving or loading audio. */
+    suspend fun resolveBookPageId(libraryId: String, page: String): String = withContext(Dispatchers.IO) {
+        val source = getLibrary(libraryId)
+        val request = IncomingBookLinkParser.parseUrl(page)
+        if (source.protocol != LibraryProtocol.LIBRIVOX || request.baseUrl != source.baseUrl || request.pageUrl == null) invalid()
+        val url = LibraryProtocolParser.httpsUrl(request.pageUrl)
+        val document = Jsoup.parse(http.get(url, 1_048_576), page)
+        val rss = document.select("a[href]").mapNotNull { element ->
+            val candidate = url.resolve(element.attr("href")) ?: return@mapNotNull null
+            try { LibraryProtocolParser.httpsUrl(candidate.toString()) } catch (_: OnlineBookException) { return@mapNotNull null }
+            candidate.takeIf { it.host == url.host && it.port == 443 && it.query == null &&
+                Regex("/rss/[1-9][0-9]{0,19}/?").matches(it.encodedPath) }
+        }.distinct().singleOrNull() ?: invalid()
+        val id = LibraryProtocolParser.requireId(rss.pathSegments[1])
+        if (metadata(source, id).sourceUrl?.trimEnd('/') != page.trimEnd('/')) unexpectedProtocol()
+        id
     }
 
     override suspend fun getLibrary(libraryId: String): OnlineLibrary {

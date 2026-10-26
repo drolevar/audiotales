@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -51,6 +52,9 @@ import io.github.drolevar.audiotales.ui.player.MiniPlayerBar
 import io.github.drolevar.audiotales.ui.settings.AboutScreen
 import io.github.drolevar.audiotales.ui.settings.SettingsScreen
 import io.github.drolevar.audiotales.ui.theme.AudioTalesTheme
+import io.github.drolevar.audiotales.ui.links.IncomingBookLinkViewModel
+import io.github.drolevar.audiotales.ui.links.IncomingLinkContent
+import io.github.drolevar.audiotales.ui.links.IncomingLinkState
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -75,9 +79,10 @@ private data class BrowseLibraryDestination(val libraryId: String) : NavKey
 private data object AboutDestination : NavKey
 
 @Composable
-fun AudioTalesApp(
+internal fun AudioTalesApp(
     onDarkThemeChanged: (Boolean) -> Unit,
     playbackConnection: PlaybackConnection,
+    incomingLinks: IncomingBookLinkViewModel,
     appViewModel: AppViewModel = hiltViewModel(),
 ) {
     val themeMode by appViewModel.themeMode.collectAsStateWithLifecycle()
@@ -99,6 +104,22 @@ fun AudioTalesApp(
         val goBack: () -> Unit = {
             if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
         }
+        val incomingState by incomingLinks.state.collectAsStateWithLifecycle()
+        val ready = incomingState as? IncomingLinkState.Ready
+        LaunchedEffect(ready?.deliveryId) {
+            ready?.let { delivery ->
+                if (incomingLinks.state.value != delivery) return@let
+                val target = delivery.target
+                val current = backStack.lastOrNull() as? BookDetailsDestination
+                val matches = current != null && (
+                    target.bookId != null && current.bookId == target.bookId ||
+                        current.libraryId == target.libraryId && current.remoteId == target.remoteId
+                    )
+                if (!matches) navigate(BookDetailsDestination(target.bookId, target.libraryId, target.remoteId))
+                incomingLinks.consumed(delivery.deliveryId)
+            }
+        }
+        IncomingLinkContent(incomingState, incomingLinks::confirmRegistration, incomingLinks::dismiss, incomingLinks::retry)
         Surface(modifier = Modifier.fillMaxSize()) {
             NavDisplay(
                 backStack = backStack,

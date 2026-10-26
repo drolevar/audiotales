@@ -10,11 +10,14 @@ An audiobook player for Android, built for discovering books in online libraries
 - Browse a library separately, rename it, share its address, or remove it from Browse while keeping your saved books and downloads.
 - See book covers in the catalogue, your saved collection and the player.
 - Read book descriptions and inspect the track list before saving. Saved descriptions and track lists remain available offline.
+- Share a supported book link from your browser to AudioTales to open its details. Opening a link does not save the book or start playback; a new library requires your confirmation.
 - Filter saved books by listening or download state, and sort by recent listening, title or author.
 - Listen with play/pause, seeking, speed and track controls, and resume your saved position.
 - Download a book for offline listening. Manage downloads from My books or Settings, pause or resume transfers, and remove downloaded audio while keeping the book and listening position.
 
 Library support depends on the website's available service and the build's configuration; adding an address does not make every website compatible. A book is shown as available offline only after all tracks supplied by that library are saved.
+
+AudioTales also accepts compatible `audiotales://` book links. Some websites send their links specifically to the old AudioTales app; use your browser's Share action with the original book link in that case.
 
 ## Planned features
 

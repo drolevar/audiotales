@@ -1,0 +1,15 @@
+<resources>
+    <string name="incoming_register_title">Register library?</string>
+    <string name="incoming_register_message">This book is from %1$s, a library that is not enabled for discovery. Register it to check compatibility and open Book details. The book will not be saved or played automatically.</string>
+    <string name="incoming_register">Register and open</string>
+    <string name="incoming_cancel">Cancel</string>
+    <string name="incoming_close">Close</string>
+    <string name="incoming_retry">Retry</string>
+    <string name="incoming_opening">Opening book</string>
+    <string name="incoming_loading">Checking the book link…</string>
+    <string name="incoming_error_title">Couldn’t open book link</string>
+    <string name="incoming_invalid">Share one supported HTTPS book link or AudioTales book link. This link is invalid or unsupported.</string>
+    <string name="incoming_unsupported">This library did not return compatible book information. Check the link or try again.</string>
+    <string name="incoming_network">The library could not be reached or returned an error. Check your connection and retry.</string>
+    <string name="incoming_not_configured">Access to this library has not been configured in this build.</string>
+</resources>
