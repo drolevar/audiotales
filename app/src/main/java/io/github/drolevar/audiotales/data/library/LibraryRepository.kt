@@ -13,7 +13,9 @@ data class LibraryBook(
     val coverReferer: String? = null,
     val description: String? = null,
     val language: String? = null,
-)
+) {
+    val displayTitle: String get() = bookDisplayTitle(title, author)
+}
 
 data class LibraryTrack(
     val id: String,

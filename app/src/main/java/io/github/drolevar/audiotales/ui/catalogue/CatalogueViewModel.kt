@@ -29,8 +29,8 @@ internal data class CatalogueSourceState(
         val filtered = books.filter { language == null || it.language == language }
         return when (sort) {
             CatalogueSort.LIBRARY -> filtered
-            CatalogueSort.TITLE -> filtered.sortedBy { it.title.lowercase() }
-            CatalogueSort.AUTHOR -> filtered.sortedWith(compareBy<CatalogueBook> { it.author?.lowercase().orEmpty() }.thenBy { it.title.lowercase() })
+            CatalogueSort.TITLE -> filtered.sortedBy { it.displayTitle.lowercase() }
+            CatalogueSort.AUTHOR -> filtered.sortedWith(compareBy<CatalogueBook> { it.author?.lowercase().orEmpty() }.thenBy { it.displayTitle.lowercase() })
         }
     }
 }

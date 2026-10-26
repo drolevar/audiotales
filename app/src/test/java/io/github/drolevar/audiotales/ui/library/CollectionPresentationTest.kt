@@ -10,9 +10,26 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertSame
 import org.junit.Test
 
 class CollectionPresentationTest {
+    @Test fun titleSortAndRecentAuthorTiesFollowDisplayTitleWithoutChangingStoredEntries() {
+        val prefixed = entry("prefixed", "Same Author - Alpha", author = "Same Author", updated = 10, position = 1)
+        val plain = entry("plain", "Beta", author = "Same Author", updated = 10, position = 2)
+        val entries = listOf(plain, prefixed)
+
+        for (sort in CollectionSort.entries) {
+            val ordered = rows(entries, sort = sort)
+            assertEquals(listOf("prefixed", "plain"), ordered.map { it.entry.book.id })
+            assertSame(prefixed, ordered.first().entry)
+            assertEquals("Same Author - Alpha", ordered.first().entry.book.title)
+            assertSame(prefixed.progress, ordered.first().entry.progress)
+            assertSame(prefixed.tracks, ordered.first().entry.tracks)
+        }
+        assertEquals(listOf("plain", "prefixed"), entries.map { it.book.id })
+    }
+
     @Test
     fun recentUsesLastListenedTimestampThenDeterministicTitleFallback() {
         val entries = listOf(entry("z", "Zulu"), entry("b", "Beta", updated = 10), entry("a", "Alpha"), entry("c", "Charlie", updated = 20))

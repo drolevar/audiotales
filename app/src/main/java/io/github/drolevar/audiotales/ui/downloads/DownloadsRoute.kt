@@ -217,7 +217,7 @@ internal fun DownloadsContent(
         AlertDialog(
             onDismissRequest = { removeId = null },
             title = { Text(stringResource(R.string.downloads_remove_title)) },
-            text = { Text(stringResource(R.string.downloads_remove_message, item.entry.book.title), Modifier.verticalScroll(rememberScrollState())) },
+            text = { Text(stringResource(R.string.downloads_remove_message, item.entry.book.displayTitle), Modifier.verticalScroll(rememberScrollState())) },
             confirmButton = {
                 TextButton(
                     enabled = item.entry.book.id !in state.busyBooks && !item.summary.removing,
@@ -246,7 +246,7 @@ private fun DownloadRow(
 ) {
     var menuOpen by rememberSaveable { mutableStateOf(false) }
     val complete = item.status == DownloadBookStatus.COMPLETE
-    val workingLabel = stringResource(R.string.downloads_working, item.entry.book.title)
+    val workingLabel = stringResource(R.string.downloads_working, item.entry.book.displayTitle)
     Row(
         modifier = modifier.heightIn(min = 112.dp).padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -262,7 +262,7 @@ private fun DownloadRow(
         ) {
             BookCover(item.entry.book.coverUrl, Modifier.size(56.dp, 80.dp), referer = item.entry.book.coverReferer)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(item.entry.book.title, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                Text(item.entry.book.displayTitle, maxLines = 2, overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, lineHeight = 22.sp,
                         letterSpacing = 0.sp, fontWeight = FontWeight.Medium))
                 item.entry.book.author?.takeIf { it.isNotBlank() }?.let {
@@ -315,13 +315,13 @@ private fun DownloadRow(
                         DownloadBookStatus.REMOVING -> R.string.downloads_removing_book
                         else -> R.string.downloads_resume
                     }
-                    Icon(painterResource(icon), stringResource(label, item.entry.book.title))
+                    Icon(painterResource(icon), stringResource(label, item.entry.book.displayTitle))
                 }
             }
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(painterResource(R.drawable.ic_more_vert),
-                        stringResource(R.string.downloads_options, item.entry.book.title))
+                        stringResource(R.string.downloads_options, item.entry.book.displayTitle))
                 }
                 DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.downloads_details)) },
@@ -375,7 +375,7 @@ private fun DownloadDetails(item: DownloadBookItem, onDismiss: () -> Unit) {
         text = {
             Column(Modifier.heightIn(max = 400.dp).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(item.entry.book.title, style = MaterialTheme.typography.titleMedium)
+                Text(item.entry.book.displayTitle, style = MaterialTheme.typography.titleMedium)
                 item.entry.tracks.forEach { track ->
                     val state = item.tracks[track.id]
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {

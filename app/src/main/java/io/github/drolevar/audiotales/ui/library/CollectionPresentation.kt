@@ -71,8 +71,8 @@ fun collectionRows(
             CollectionFilter.DOWNLOADED -> row.download.complete
         }
     }
-    val titleOrder = compareBy<CollectionRow> { it.entry.book.title.lowercase(Locale.ROOT) }
-        .thenBy { it.entry.book.title }.thenBy { it.entry.book.id }
+    val titleOrder = compareBy<CollectionRow> { it.entry.book.displayTitle.lowercase(Locale.ROOT) }
+        .thenBy { it.entry.book.displayTitle }.thenBy { it.entry.book.id }
     val order = when (sort) {
         CollectionSort.RECENT -> compareByDescending<CollectionRow> { it.entry.progress?.updatedAtEpochMs ?: Long.MIN_VALUE }
             .then(titleOrder)

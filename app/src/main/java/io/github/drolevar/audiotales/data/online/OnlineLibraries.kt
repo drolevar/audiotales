@@ -6,6 +6,7 @@ import io.github.drolevar.audiotales.data.library.LibraryAddition
 import io.github.drolevar.audiotales.data.library.LibraryRepository
 import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
 import io.github.drolevar.audiotales.data.library.validArtworkUrl
+import io.github.drolevar.audiotales.data.library.bookDisplayTitle
 import io.github.drolevar.audiotales.data.local.LibraryDao
 import io.github.drolevar.audiotales.data.local.OnlineLibraryEntity
 import io.github.drolevar.audiotales.data.local.TrackEntity
@@ -43,7 +44,9 @@ data class CatalogueBook(
     val sourceUrl: String?,
     val coverReferer: String? = null,
     val language: String? = null,
-)
+) {
+    val displayTitle: String get() = bookDisplayTitle(title, author)
+}
 data class CataloguePage(val books: List<CatalogueBook>, val nextOffset: Int?)
 
 /** Library instances are persisted separately from the protocol used to communicate with them. */

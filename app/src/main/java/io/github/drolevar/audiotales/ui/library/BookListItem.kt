@@ -55,7 +55,7 @@ internal fun BookListItem(
     var confirmRemoval by rememberSaveable(book.id) { mutableStateOf(false) }
     val action = row.downloadAction
     val actionEnabled = !busy && !row.download.removing && row.entry.tracks.isNotEmpty()
-    val actionLabel = downloadActionLabel(action, book.title)
+    val actionLabel = downloadActionLabel(action, book.displayTitle)
     val actionClick = if (action == CollectionDownloadAction.VIEW) onOpenDownloads else onDownloadAction
     Row(
         modifier = modifier.fillMaxWidth().heightIn(min = 112.dp).padding(start = 16.dp, end = 8.dp),
@@ -71,7 +71,7 @@ internal fun BookListItem(
             BookCover(book.coverUrl, Modifier.size(width = 56.dp, height = 80.dp), book.coverReferer)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    book.title,
+                    book.displayTitle,
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium, fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = 0.sp),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -102,7 +102,7 @@ internal fun BookListItem(
             }
             Box {
                 IconButton(onClick = { menuExpanded = true }, modifier = Modifier.size(48.dp)) {
-                    Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.collection_book_actions, book.title))
+                    Icon(painterResource(R.drawable.ic_more_vert), stringResource(R.string.collection_book_actions, book.displayTitle))
                 }
                 DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                     DropdownMenuItem(text = { Text(stringResource(R.string.book_details_title)) }, onClick = { menuExpanded = false; onBookDetails() })
@@ -125,7 +125,7 @@ internal fun BookListItem(
     if (confirmRemoval) AlertDialog(
         onDismissRequest = { confirmRemoval = false },
         title = { Text(stringResource(R.string.collection_remove_title)) },
-        text = { Text(stringResource(R.string.collection_remove_description, book.title), Modifier.verticalScroll(rememberScrollState())) },
+        text = { Text(stringResource(R.string.collection_remove_description, book.displayTitle), Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { confirmRemoval = false; onRemoveDownloads() }) { Text(stringResource(R.string.remove)) } },
         dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text(stringResource(R.string.collection_cancel)) } },
     )

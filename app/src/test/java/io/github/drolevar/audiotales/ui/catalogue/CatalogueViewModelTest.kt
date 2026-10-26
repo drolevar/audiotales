@@ -18,6 +18,23 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CatalogueViewModelTest {
+    @Test fun shownTitleAndAuthorTieSortingUseDisplayTitleWhileProviderOrderAndRawMetadataRemainUnchanged() {
+        val prefixed = book("source", "prefixed").copy(title = "Same Author - Alpha", author = "Same Author")
+        val plain = book("source", "plain").copy(title = "Beta", author = "Same Author")
+        val original = listOf(plain, prefixed)
+        val state = CatalogueSourceState(books = original)
+
+        for (sort in listOf(CatalogueSort.TITLE, CatalogueSort.AUTHOR)) {
+            val shown = state.shown(sort)
+            assertEquals(listOf("prefixed", "plain"), shown.map { it.remoteId })
+            assertSame(prefixed, shown.first())
+            assertEquals("Same Author - Alpha", shown.first().title)
+            assertEquals("Same Author", shown.first().author)
+        }
+        assertEquals(original, state.shown(CatalogueSort.LIBRARY))
+        assertEquals(original, state.books)
+    }
+
     private val dispatcher = StandardTestDispatcher()
     private val stores = mutableListOf<ViewModelStore>()
     @Before fun setup() { Dispatchers.setMain(dispatcher) }

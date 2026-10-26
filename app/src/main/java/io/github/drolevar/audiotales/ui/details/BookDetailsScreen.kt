@@ -73,7 +73,7 @@ internal fun BookDetailsRoute(
                 book.sourceUrl?.let { url ->
                     context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, listOfNotNull(book.title, book.author?.takeIf(String::isNotBlank), url).joinToString("\n"))
+                        putExtra(Intent.EXTRA_TEXT, listOfNotNull(book.displayTitle, book.author?.takeIf(String::isNotBlank), url).joinToString("\n"))
                     }, null))
                 }
             }
@@ -144,7 +144,7 @@ internal fun BookDetailsScreen(
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.Top) {
                     BookCover(book.coverUrl, Modifier.size(80.dp, 112.dp), book.coverReferer)
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(book.title, style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp))
+                        Text(book.displayTitle, style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp))
                         book.author?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         (state.sourceName ?: book.sourceUrl?.let { runCatching { URI(it).host }.getOrNull() })?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         Text(stringResource(if (state.saved) R.string.book_details_saved else R.string.book_details_unsaved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -243,7 +243,7 @@ internal fun BookDetailsScreen(
     }
     if (confirmRemoval) AlertDialog(
         onDismissRequest = { confirmRemoval = false }, title = { Text(stringResource(R.string.collection_remove_title)) },
-        text = { Text(stringResource(R.string.collection_remove_description, book?.title.orEmpty()), Modifier.verticalScroll(rememberScrollState())) },
+        text = { Text(stringResource(R.string.collection_remove_description, book?.displayTitle.orEmpty()), Modifier.verticalScroll(rememberScrollState())) },
         confirmButton = { TextButton(onClick = { confirmRemoval = false; onRemoveDownloads() }) { Text(stringResource(R.string.remove)) } },
         dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text(stringResource(R.string.cancel)) } },
     )

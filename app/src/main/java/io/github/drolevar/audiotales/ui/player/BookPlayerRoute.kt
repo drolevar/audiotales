@@ -61,7 +61,7 @@ fun BookPlayerRoute(
                 try {
                     val intent = if (share) Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, listOfNotNull(book.title, book.author?.takeIf(String::isNotBlank), url).joinToString("\n"))
+                        putExtra(Intent.EXTRA_TEXT, listOfNotNull(book.displayTitle, book.author?.takeIf(String::isNotBlank), url).joinToString("\n"))
                     }, null) else Intent(Intent.ACTION_VIEW, url.toUri())
                     context.startActivity(intent)
                 } catch (_: android.content.ActivityNotFoundException) {
@@ -189,7 +189,7 @@ internal fun BookPlayerContent(
                             BookCover(book.coverUrl, Modifier.widthIn(max = 345.dp).fillMaxWidth().height(coverHeight), book.coverReferer,
                                 containerColor = MaterialTheme.colorScheme.surface, placeholderSize = 64.dp)
                             Spacer(Modifier.height(4.dp))
-                            Text(book.title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().semantics { heading() })
+                            Text(book.displayTitle, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().semantics { heading() })
                             book.author?.takeIf(String::isNotBlank)?.let {
                                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                             }
@@ -287,7 +287,7 @@ internal fun BookPlayerContent(
                 onSleepTimer = { onSleepTimer(it); sheet = null }, onEndOfTrack = { onEndOfTrackTimer(); sheet = null },
                 onCancel = { onCancelSleepTimer(); sheet = null }, onDismiss = { sheet = null })
         }
-        if (confirmation != null) PlayerRemovalDialog(book.title, removeBook = confirmation == "book", enabled = !state.actionBusy,
+        if (confirmation != null) PlayerRemovalDialog(book.displayTitle, removeBook = confirmation == "book", enabled = !state.actionBusy,
             onDismiss = { confirmation = null }, onConfirm = {
                 val removeBook = confirmation == "book"
                 confirmation = null

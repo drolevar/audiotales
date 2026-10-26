@@ -56,7 +56,7 @@ internal fun PlayerInformationSheet(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(state.book?.title.orEmpty(), style = MaterialTheme.typography.titleLarge)
+            Text(state.book?.displayTitle.orEmpty(), style = MaterialTheme.typography.titleLarge)
             state.book?.author?.takeIf(String::isNotBlank)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             Text(pluralStringResource(R.plurals.player_chapter_count, state.tracks.size, state.tracks.size))
             state.book?.language?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
@@ -95,7 +95,7 @@ internal fun PlayerDownloadsSheet(
             Modifier.fillMaxWidth().weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Text(state.book?.title.orEmpty(), style = MaterialTheme.typography.titleMedium)
+            Text(state.book?.displayTitle.orEmpty(), style = MaterialTheme.typography.titleMedium)
             when {
                 state.downloadsFailed -> {
                     PlayerError(stringResource(R.string.player_download_check_failed))

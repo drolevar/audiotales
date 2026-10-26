@@ -280,7 +280,7 @@ internal class LibrarySessionCallback(
         .setMediaId(LibraryMediaIds.book(id))
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(title)
+                .setTitle(displayTitle)
                 .setArtist(author)
                 .setIsBrowsable(true)
                 .setIsPlayable(false)
@@ -290,7 +290,7 @@ internal class LibrarySessionCallback(
         .build()
 
     private suspend fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem =
-        toPlaybackMediaItem(library.getBook(bookId)?.title, storage, includeLocation)
+        toPlaybackMediaItem(library.getBook(bookId)?.displayTitle, storage, includeLocation)
 }
 
 /** Build only from repository-owned transport and bounds; player positions stay clip-relative. */
