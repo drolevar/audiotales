@@ -77,6 +77,8 @@ The order below was revised on 2026-10-25 after the user clarified that online-l
 
 ### 5. Add local M4B and multi-file MP3 import
 
+**On hold — 2026-10-26:** The user blocked M4B import and has not committed to implementing it. Do not schedule this milestone until the scope is explicitly reopened. The conditional design below is retained for reference.
+
 **Dependencies:** Reliable playback/source identity and retained schema history; Storage Access Framework selection and an app-owned import operation. Consult [official SAF guidance](https://developer.android.com/training/data-storage/shared/documents-files) for persistable grants and moved/deleted-document behavior.
 
 **Acceptance:** Start with one local M4B: retain the offered read grant, validate off the main thread, use a filename fallback when tags are absent, and atomically save stable book/track identities. Cancellation, unsupported/unreadable documents, duplicate import and missing persistent grants have explicit outcomes. Then add MP3 folder grouping with deterministic order and reviewable metadata. Re-selecting a moved source preserves book identity and listening history. Keep these user-owned files distinct from app-managed downloads.

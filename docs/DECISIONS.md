@@ -6,7 +6,7 @@ This is the durable record of the choices made for AudioTales. **Accepted** mean
 
 ## 1. Product and distribution — accepted
 
-AudioTales is a native Android audiobook player, with Android Auto support as a first-class requirement. Its primary use case is finding or opening books from online audiobook libraries, listening online, and downloading them for offline listening. Local M4B and multi-file MP3 import remains a secondary supported direction.
+AudioTales is a native Android audiobook player, with Android Auto support as a first-class requirement. Its primary use case is finding or opening books from online audiobook libraries, listening online, and downloading them for offline listening. Local M4B import is on hold as of 2026-10-26, with no commitment to implement it; other local-file import remains deferred.
 
 The intended listening features are reliable resume, chapters, bookmarks, adjustable playback speed, a sleep timer, offline listening, and car controls. Online catalogue access and managed downloads are core product features. The user's audioknigi.com.ua example is the first integration to investigate; provider compatibility is not established merely by selecting it. See decision 14 for the 2026-10-25 priority clarification, which supersedes the initial local-import-first delivery order.
 
@@ -57,6 +57,8 @@ Use stable book and track identifiers. Resolve playback requests to entries in t
 An empty browsable library is sufficient for the first scaffold. Import, real playback queues, resume restoration, voice search, chapter extraction, and car acceptance testing are implementation milestones.
 
 ## 6. Library, files, and downloads — accepted direction
+
+Scope update, 2026-10-26: the user blocked M4B import for the time being and is unsure whether it should be implemented. The file-import guidance below is conditional on a later decision to resume that work; it does not schedule or promise the feature. This supersedes earlier language presenting local import as a committed secondary capability.
 
 Use the Storage Access Framework for user-selected files and folders, retaining URI grants when available. Keep user-owned source files separate from app-managed downloads, and provide recovery when files move or permissions are revoked.
 
@@ -247,3 +249,11 @@ Partner playlists can describe several named sections of the same MP3 using `sta
 Retain each playable provider section as an ordered track, persist its source range, and apply Media3's native `ClippingConfiguration` in the service's repository-resolved media item. Position and listening progress remain relative to the selected section. Validate finite nonnegative times, increasing bounds and nonoverlapping ranges; repeated paths must identify the same URL within a playlist. A renewed host or query may change between complete resolutions without changing stable section identity. This supports provider-supplied ranges; it does not implement embedded chapter extraction.
 
 Sections sharing a recording share one book-scoped download/cache resource. Download the full source once, expose availability for every section, and count its bytes once. Download-only removal retains the sections and listening history; full book removal deletes the shared audio and all saved history. Preserve legacy whole-file IDs, cache keys and playback semantics. Room schema 7 adds range/resource fields with safe defaults; it does not rewrite existing tracks or progress.
+
+## 21. Incoming book links — accepted direction, 2026-10-26
+
+Support incoming `audiotales://` links, including the legacy triple-slash `/TabScreen/Favorite/Review?link=<library-host>&id=<book-id>` form, and partner HTTPS share URLs shaped as `/api?link=<library-host>&id=<book-id>`. Treat the legacy route as compatibility input mapped to the existing native Book details destination. Do not adopt the legacy application package or navigation architecture. The user's current request prioritizes this work over its earlier last-priority placement.
+
+Validate incoming library/book identity and resolve it through application-owned provider data. Opening a link inspects the book without automatically saving or playing it; an unknown library requires explicit registration. Handle Android text sharing and direct URI delivery consistently across cold and warm Activity launches. Do not execute provider JavaScript, forward nested intents or accept arbitrary file/content/media URLs as playback authority.
+
+The supplied provider page returns HTML that redirects through JavaScript to an intent explicitly targeting `com.audiotales`. Supporting the URI scheme cannot override that package restriction, even if the legacy app is absent; see [Android's package-limited intent resolution](https://developer.android.com/reference/android/content/Intent#setPackage(java.lang.String)). Parse the original shared HTTPS URL directly. Do not promise automatic interception of another application's package-targeted redirect or verified HTTPS links without the necessary domain association. This section records the accepted direction; incoming-link implementation and verification remain pending.

@@ -21,7 +21,6 @@ Library support depends on the website's available service and the build's confi
 - **Chapters and bookmarks.** Navigate longer books and save moments you want to revisit.
 - **Sleep timer.** Stop playback automatically when winding down.
 - **Listening in the car.** Browse and control playback through Android Auto on supported phones and vehicles.
-- **Local audiobooks too.** Open M4B files and books split across multiple MP3 files.
 
 AudioTales requires **Android 8.0 and later**. Device testing is still in progress. Android Auto has its own compatibility requirements and has not yet been verified.
 
