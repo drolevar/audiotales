@@ -335,6 +335,12 @@ Removing downloads preserved every saved database row, including listening progr
 
 These checks establish metadata loading and emulator playback/cache behavior for the sampled recordings. They do not establish physical-device audio output, Android Auto, headset/audio-focus behavior, arbitrary provider compatibility or MP3 seek accuracy for every encoding. No GUI layout or navigation changes were made in this fix.
 
+### Loaded cover framing — 2026-10-26
+
+The shared cover component now makes its placeholder background transparent after a successful image load. Previously, square artwork fitted inside the 56 × 80 dp list slot exposed colored strips above and below the image. Figma My books node `34:1126` uses fitted artwork with a transparent wrapper. Loading, missing and failed artwork retain the existing placeholder frame and book icon.
+
+The debug build, lint and all **114 JVM tests** passed in **1m 44s**; lint reported **0 errors, 9 existing warnings and 1 hint**. Independent review found no actionable issues. API 26 visual checks covered My books and live Browse in light and dark themes, plus separate null-URL and failed-file artwork fixtures. Compared screenshot pixels confirm that the former top/bottom strips now match the row background while sampled square and portrait artwork pixels remain unchanged. These are inspected captures and focused pixel comparisons, not a golden-image suite. The owned emulator was stopped afterwards.
+
 ## Release preparation
 
 Release signing is not configured. Keep signing keys and credentials outside the repository. Preserve each release's version, Git commit, and R8 mappings for diagnostics. Distribution channels, release automation, and a public repository transition remain separate decisions.

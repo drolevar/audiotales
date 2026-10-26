@@ -45,7 +45,7 @@ internal fun BookCover(
     Surface(
         modifier = modifier,
         shape = MaterialTheme.shapes.extraSmall,
-        color = containerColor,
+        color = if (artworkLoaded) Color.Transparent else containerColor,
         contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
     ) {
         Box(contentAlignment = Alignment.Center) {
