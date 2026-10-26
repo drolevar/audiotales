@@ -6,7 +6,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryRepository
 import io.github.drolevar.audiotales.data.online.OnlineLibraries
+import io.github.drolevar.audiotales.data.online.OnlineBookDetailsSource
 import io.github.drolevar.audiotales.playback.BookDownloads
+import io.github.drolevar.audiotales.playback.TrackDownloadState
 import io.github.drolevar.audiotales.playback.summarizeBookDownloads
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -14,6 +16,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collect
@@ -32,20 +35,42 @@ internal data class DownloadsUiState(
     val errors: Map<String, DownloadActionError> = emptyMap(),
 )
 
+/** Keeps lifecycle/action tests independent of the Android download service. */
+internal interface DownloadsManager {
+    val state: StateFlow<Map<String, TrackDownloadState>>
+    suspend fun initialize()
+    suspend fun refreshProgress()
+    suspend fun downloadBook(bookId: String)
+    suspend fun pauseBook(bookId: String)
+    suspend fun removeBook(bookId: String)
+}
+
+private class ManagedDownloads(private val delegate: BookDownloads) : DownloadsManager {
+    override val state = delegate.state
+    override suspend fun initialize() = delegate.initialize()
+    override suspend fun refreshProgress() = delegate.refreshProgress()
+    override suspend fun downloadBook(bookId: String) = delegate.downloadBook(bookId)
+    override suspend fun pauseBook(bookId: String) = delegate.pauseBook(bookId)
+    override suspend fun removeBook(bookId: String) = delegate.removeBook(bookId)
+}
+
 @HiltViewModel
-internal class DownloadsViewModel @Inject constructor(
+internal class DownloadsViewModel internal constructor(
     private val library: LibraryRepository,
-    private val downloads: BookDownloads,
-    private val onlineLibraries: OnlineLibraries,
+    private val downloads: DownloadsManager,
+    private val onlineLibraries: OnlineBookDetailsSource,
 ) : ViewModel() {
+    @Inject constructor(library: LibraryRepository, downloads: BookDownloads, onlineLibraries: OnlineLibraries) :
+        this(library, ManagedDownloads(downloads), onlineLibraries)
+
     private val _state = MutableStateFlow(DownloadsUiState())
     val state = _state.asStateFlow()
     private var visibleJob: Job? = null
 
     fun start() {
         if (visibleJob?.isActive == true) return
+        _state.update { it.copy(loading = it.loading || it.failed, failed = false) }
         visibleJob = viewModelScope.launch {
-            _state.update { it.copy(failed = false) }
             try {
                 downloads.initialize()
                 coroutineScope {

@@ -275,8 +275,13 @@ private fun DownloadRow(
                         item.summary.completedTracks, item.summary.totalTracks),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    item.byteProgress?.takeUnless { item.summary.removing }?.let { progress ->
-                        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                    if (!item.summary.removing) {
+                        val progress = item.byteProgress
+                        if (progress != null) {
+                            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+                        } else if (item.status == DownloadBookStatus.DOWNLOADING) {
+                            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                        }
                     }
                 }
                 error?.let {

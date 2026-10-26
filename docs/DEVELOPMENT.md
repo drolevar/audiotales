@@ -279,6 +279,20 @@ At 200% text in short landscape windows, both API 26 and API 37.2 allowed scroll
 
 Player layout remains on hold. Full Figma parity, remaining non-player error and accessibility workflows, playback, Android Auto and physical-device qualification are not established by these checks.
 
+### Download progress and recovery presentation — 2026-10-25–26
+
+Active downloads with unknown total sizes now expose Material's indeterminate progress indicator while retaining actual saved-track counts. Queued, paused, failed and removing states do not animate as active transfers. Retrying a failed Downloads load immediately returns to loading until an observed result arrives, instead of briefly presenting an empty collection. A normal lifecycle return retains successfully loaded content. Independent review found no actionable issues.
+
+Five new ViewModel tests cover deferred retry with populated/empty results, lifecycle polling cancellation, source-refresh and request error categories, correct-book retry and duplicate-action suppression. The JDK 21 debug build, lint, all **84 JVM tests** and test-APK assembly passed; lint reported **0 errors, 9 existing warnings and 1 hint**. The initial 512 MiB metaspace cap was insufficient for lint after adding Compose instrumentation dependencies; the successful retry retained one worker and a 1536 MiB heap with a 768 MiB metaspace cap. Builds and emulators ran sequentially.
+
+The instrumentation setup uses the pinned Compose BOM and the v2 Compose test rule. Espresso is explicitly pinned to stable **3.7.0** for Android tests: Compose's transitive 3.5.0 dependency failed during input initialization on API 37.2, before app assertions. The stable version replaces the removed reflective `InputManager.getInstance` lookup, as documented in the [AndroidX Test release notes](https://developer.android.com/jetpack/androidx/releases/test#espresso-3.7.0). This pin changes no application runtime dependency.
+
+All **seven `DownloadsContentTest` cases passed on both API 26 and API 37.2** with the final dependencies. They exercise queued/downloading/paused/failed/completed action labels and callbacks, unknown versus known progress semantics, load and per-book errors, busy/removing restrictions, disconnected playback, per-track details and confirmed/cancelled removal. A dark, state-only **320 × 320 dp** surface at 200% text verified scrolling to each transfer action, full visibility of its native container and a 48 dp touch target. Screenshots were inspected separately; they are audit captures, not golden-image comparisons. The actual API 37.2 application also opened its empty Downloads route and returned to My books.
+
+The first capture caught an Android Activity transition; final captures disabled emulator window animations. The first stronger bounds assertion incorrectly equated the native 40 dp visible container with its 48 dp touch target. The corrected test checks clipped versus unclipped visual bounds and touch dimensions separately. These test-driver corrections did not change application layout. Both task emulators were stopped after testing.
+
+These controlled UI and ViewModel checks do not establish live provider/Media3 failure recovery, TalkBack interaction with every transfer state, physical-device behavior or full Figma parity. Player layout remains on hold and the sleep timer remains unfinished.
+
 ## Release preparation
 
 Release signing is not configured. Keep signing keys and credentials outside the repository. Preserve each release's version, Git commit, and R8 mappings for diagnostics. Distribution channels, release automation, and a public repository transition remain separate decisions.
