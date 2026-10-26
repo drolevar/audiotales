@@ -43,9 +43,12 @@ internal fun knownByteProgress(ids: List<String>, states: Map<String, TrackDownl
     if (ids.isEmpty()) return null
     var total = 0L
     var downloaded = 0L
+    val resources = mutableSetOf<String>()
     for (id in ids) {
         val state = states[id] ?: return null
-        if (state.totalBytes <= 0 || Long.MAX_VALUE - total < state.totalBytes) return null
+        if (state.totalBytes <= 0) return null
+        if (!resources.add(state.resourceId ?: id)) continue
+        if (Long.MAX_VALUE - total < state.totalBytes) return null
         total += state.totalBytes
         downloaded += state.bytesDownloaded.coerceIn(0, state.totalBytes)
     }

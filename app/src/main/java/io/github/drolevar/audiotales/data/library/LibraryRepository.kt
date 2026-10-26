@@ -25,7 +25,13 @@ data class LibraryTrack(
     val providerTrackRef: String? = null,
     val streamReferer: String? = null,
     val downloadReferer: String? = null,
-)
+    val sourceStartMs: Long = 0,
+    val sourceEndMs: Long? = null,
+    val audioResourceId: String? = null,
+) {
+    /** Sections of one recording share one complete audio download and cache key. */
+    val downloadId: String get() = audioResourceId ?: id
+}
 
 data class ListeningProgress(
     val bookId: String,

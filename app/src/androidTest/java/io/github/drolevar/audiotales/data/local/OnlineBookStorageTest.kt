@@ -44,6 +44,103 @@ class OnlineBookStorageTest {
     private val context = instrumentation.targetContext
 
     @Test
+    fun versionSixMigrationPreservesWholeFileHistoryAndRoundTripsRangedTracks() = runTest {
+        val name = "migration-ranges-v6-test.db"
+        context.deleteDatabase(name)
+        try {
+            val schema = JSONObject(instrumentation.context.assets.open(
+                "io.github.drolevar.audiotales.data.local.AudioTalesDatabase/6.json",
+            ).bufferedReader().use { it.readText() }).getJSONObject("database")
+            SQLiteDatabase.openOrCreateDatabase(context.getDatabasePath(name), null).use { old ->
+                val entities = schema.getJSONArray("entities")
+                for (i in 0 until entities.length()) {
+                    val entity = entities.getJSONObject(i)
+                    fun sql(text: String) = text.replace("\${TABLE_NAME}", entity.getString("tableName"))
+                    old.execSQL(sql(entity.getString("createSql")))
+                    val indices = entity.optJSONArray("indices") ?: continue
+                    for (j in 0 until indices.length()) old.execSQL(sql(indices.getJSONObject(j).getString("createSql")))
+                }
+                old.execSQL("INSERT INTO books VALUES ('saved', 'Saved book', 'Author', 'library', '42', 'https://library.example/', NULL, NULL, 'Description', 'English')")
+                old.execSQL("INSERT INTO tracks VALUES ('track', 'saved', 'Chapter', 'https://cdn.example/book.mp3', 0, 100000, '/book.mp3', 'https://library.example/mobapp', 'https://library.example/')")
+                old.execSQL("INSERT INTO playback_progress VALUES ('saved', 'track', 45000, 10000)")
+                old.execSQL("INSERT INTO bookmarks VALUES ('mark', 'saved', 'track', 15000, 'Keep this', 9000)")
+                old.version = 6
+            }
+            val original = book()
+            val resource = original.tracks.single().id
+            val first = original.tracks.single().copy(id = "section-one", durationMs = 290_000,
+                providerTrackRef = "/book.mp3#t=0-290000", sourceEndMs = 290_000, audioResourceId = resource)
+            val second = first.copy(id = "section-two", sequenceIndex = 1, durationMs = 197_000,
+                providerTrackRef = "/book.mp3#t=290000-487000", sourceStartMs = 290_000, sourceEndMs = 487_000)
+            val database = openDatabase(name)
+            try {
+                val dao = database.libraryDao()
+                val repository = RoomLibraryRepository(dao)
+                val legacy = requireNotNull(repository.getTrack("track"))
+                assertEquals(0L, legacy.sourceStartMs)
+                assertNull(legacy.sourceEndMs)
+                assertNull(legacy.audioResourceId)
+                assertEquals("track", legacy.downloadId)
+                assertEquals(PlaybackProgressEntity("saved", "track", 45000, 10000), dao.getProgress("saved"))
+                assertEquals(BookmarkEntity("mark", "saved", "track", 15000, "Keep this", 9000),
+                    dao.observeBookmarks("saved").first().single())
+                assertEquals("Description", repository.getBook("saved")?.description)
+                assertTrue(repository.addOnlineBook(original.copy(tracks = listOf(first, second))).added)
+                assertEquals(listOf(first, second), repository.getTracks(original.id))
+            } finally { database.close() }
+            val reopened = openDatabase(name)
+            try {
+                val repository = RoomLibraryRepository(reopened.libraryDao())
+                assertEquals(listOf(first, second), repository.getTracks(original.id))
+                assertEquals(listOf(resource, resource), repository.getTracks(original.id).map { it.downloadId })
+                assertEquals(45000L, repository.getProgress("saved")?.positionMs)
+                assertEquals("Keep this", reopened.libraryDao().observeBookmarks("saved").first().single().label)
+            } finally { reopened.close() }
+        } finally { context.deleteDatabase(name) }
+    }
+
+    @Test
+    fun rangedSourceRenewalPreservesClipsResourcesAndHistoryAndRejectsChangedRanges() = runTest {
+        val name = "ranged-source-refresh-test.db"
+        context.deleteDatabase(name)
+        val database = openDatabase(name)
+        try {
+            val dao = database.libraryDao()
+            val original = book()
+            val first = original.tracks.single().copy(id = "section-one", durationMs = 290_000,
+                providerTrackRef = "/book.mp3#t=0-290000", sourceEndMs = 290_000, audioResourceId = "shared")
+            val second = first.copy(id = "section-two", sequenceIndex = 1, durationMs = 197_000,
+                providerTrackRef = "/book.mp3#t=290000-487000", sourceStartMs = 290_000, sourceEndMs = 487_000)
+            val repository = RoomLibraryRepository(dao)
+            repository.addOnlineBook(original.copy(tracks = listOf(first, second)))
+            dao.saveProgress(PlaybackProgressEntity(original.id, second.id, 45_000, 10_000))
+            dao.insertBookmark(BookmarkEntity("range-mark", original.id, second.id, 15_000, "Keep this", 9_000))
+            val replacements = dao.getTracks(original.id).map {
+                it.copy(uri = "https://renewed.example/book.mp3?token=new")
+            }
+            dao.refreshTrackSources(original.id, replacements.reversed())
+            val renewed = repository.getTracks(original.id)
+            assertEquals(listOf(first, second).map { it.copy(uri = "https://renewed.example/book.mp3?token=new") }, renewed)
+            for (changed in listOf(
+                replacements.last().copy(sourceStartMs = 290_001),
+                replacements.last().copy(sourceEndMs = 487_001),
+                replacements.last().copy(audioResourceId = "different"),
+            )) {
+                try {
+                    dao.refreshTrackSources(original.id, listOf(replacements.first().copy(uri = "https://wrong.example/book.mp3"), changed))
+                    fail("Changed clip or recording must not renew saved transport")
+                } catch (_: IllegalArgumentException) { /* Expected, including transaction rollback. */ }
+                assertEquals(renewed, repository.getTracks(original.id))
+            }
+            assertEquals(PlaybackProgressEntity(original.id, second.id, 45_000, 10_000), dao.getProgress(original.id))
+            assertEquals("Keep this", dao.observeBookmarks(original.id).first().single().label)
+        } finally {
+            database.close()
+            context.deleteDatabase(name)
+        }
+    }
+
+    @Test
     fun versionOneHistorySurvivesMigrationAndNewOnlineBooksCanBeSaved() = runTest {
         val name = "migration-online-test.db"
         context.deleteDatabase(name)
@@ -431,13 +528,15 @@ class OnlineBookStorageTest {
             dao.insertBookmark(BookmarkEntity("refresh-mark", original.id, second.id, 15000, "Keep this", 9000))
             val updates = dao.getTracks(original.id).map { track ->
                 track.copy(id = "new-${track.id}", uri = "https://renewed.example${track.providerTrackRef}?token=new",
-                    streamReferer = "https://library.example/mobapp", downloadReferer = "https://library.example/")
+                    streamReferer = "https://library.example/mobapp", downloadReferer = "https://library.example/",
+                    sourceEndMs = 100_000)
             }
             dao.refreshTrackSources(original.id, updates.reversed())
             val renewed = dao.getTracks(original.id)
             assertEquals(listOf(first.id, second.id), renewed.map { it.id })
             assertTrue(renewed.all { it.uri.startsWith("https://renewed.example") })
             assertEquals("https://library.example/mobapp", renewed.first().streamReferer)
+            assertTrue(renewed.all { it.sourceStartMs == 0L && it.sourceEndMs == null && it.audioResourceId == null })
             assertEquals(45000L, dao.getProgress(original.id)?.positionMs)
             assertEquals("Keep this", dao.observeBookmarks(original.id).first().single().label)
             try {
@@ -579,7 +678,7 @@ class OnlineBookStorageTest {
     private fun openDatabase(name: String): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, name)
             .setDriver(AndroidSQLiteDriver())
-            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6)
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6, LibraryMigrations.MIGRATION_6_7)
             .build()
 
     private fun book() = ResolvedOnlineBook(

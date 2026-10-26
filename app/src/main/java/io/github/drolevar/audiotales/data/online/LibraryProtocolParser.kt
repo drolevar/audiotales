@@ -82,25 +82,56 @@ internal object LibraryProtocolParser {
         if (entries.isEmpty()) throw OnlineBookException(OnlineBookError.EMPTY_PLAYLIST)
         if (entries.size > 2000) unexpectedProtocol()
         val id = bookId(source, book.remoteId)
-        val references = mutableSetOf<String>()
-        val tracks = entries.mapIndexed { index, element ->
+        val sections = entries.map { element ->
             val item = element as? JsonObject ?: unexpectedProtocol()
-            // Clipping semantics are unverified; do not silently play a different recording range.
-            if (item.containsKey("start") && item.text("start")?.toDoubleOrNull() != 0.0) unexpectedProtocol()
             val uri = httpsUrl(item.requiredText("file"))
             if (!uri.encodedPath.endsWith(".mp3", ignoreCase = true)) {
                 throw OnlineBookException(OnlineBookError.UNSUPPORTED_SOURCE)
             }
-            val reference = uri.encodedPath
-            if (!references.add(reference)) unexpectedProtocol()
+            val start = if (item.containsKey("start")) sourceTimeMs(item, "start") else 0L
+            val end = if (item.containsKey("end")) sourceTimeMs(item, "end") else null
+            if (end != null && end <= start || start != 0L && end == null) unexpectedProtocol()
+            PartnerSection(title(item.requiredText("title")), uri, start, end)
+        }
+        val resources = sections.groupBy { it.uri.encodedPath }
+        resources.values.filter { it.size > 1 }.forEach { ranges ->
+            // Paths remain stable across renewals, but one playlist must name one
+            // unambiguous transport URL for every shared recording/cache entry.
+            if (ranges.any { it.uri != ranges.first().uri }) unexpectedProtocol()
+            if (ranges.any { it.endMs == null }) unexpectedProtocol()
+            ranges.sortedBy { it.startMs }.zipWithNext().forEach { (previous, next) ->
+                if (requireNotNull(previous.endMs) > next.startMs) unexpectedProtocol()
+            }
+        }
+        val tracks = sections.mapIndexed { index, section ->
+            val path = section.uri.encodedPath
+            val resourceId = "$id:${digest(path)}"
+            // A unique zero-start path retains its historical identity and cache key.
+            val rangedIdentity = resources.getValue(path).size > 1 || section.startMs != 0L
+            val reference = if (rangedIdentity) "$path#t=${section.startMs}-${section.endMs}" else path
             LibraryTrack(
                 id = "$id:${digest(reference)}", bookId = id,
-                title = title(item.requiredText("title")), uri = uri.toString(), sequenceIndex = index,
+                title = section.title, uri = section.uri.toString(), sequenceIndex = index,
+                durationMs = section.endMs?.minus(section.startMs),
                 providerTrackRef = reference, streamReferer = source.baseUrl + "mobapp", downloadReferer = source.baseUrl,
+                sourceStartMs = section.startMs, sourceEndMs = section.endMs,
+                audioResourceId = resourceId.takeIf { rangedIdentity },
             )
         }
         return ResolvedOnlineBook(id, source.id, book.remoteId, source.baseUrl, book.title, book.author, tracks,
             book.coverUrl, book.coverReferer, description = book.description)
+    }
+
+    private data class PartnerSection(val title: String, val uri: HttpUrl, val startMs: Long, val endMs: Long?)
+
+    /** Convert decimal seconds exactly; reject sub-millisecond precision and unsafe time conversion. */
+    private fun sourceTimeMs(item: JsonObject, field: String): Long {
+        val value = item.text(field)?.takeIf { it.length <= 64 } ?: unexpectedProtocol()
+        val millis = try { value.toBigDecimal().scaleByPowerOfTen(3).longValueExact() }
+        catch (_: NumberFormatException) { unexpectedProtocol() }
+        catch (_: ArithmeticException) { unexpectedProtocol() }
+        // Media3 represents times internally in microseconds.
+        return millis.takeIf { it in 0..Long.MAX_VALUE / 1000 } ?: unexpectedProtocol()
     }
 
     /** The artwork lookup validates one provider record without requiring a playlist or sections. */

@@ -89,6 +89,24 @@ class DownloadOverviewTest {
     }
 
     @Test
+    fun sharedAudioBytesAreCountedOnceWhileEveryLogicalTrackMustBeAvailable() {
+        val shared = TrackDownloadState(DownloadStatus.DOWNLOADING, 50, 100, resourceId = "shared")
+        val states = mapOf(
+            "a" to shared,
+            "b" to shared,
+            "c" to TrackDownloadState(DownloadStatus.COMPLETED, 300, 300, resourceId = "other"),
+        )
+
+        assertEquals(0.875f, knownByteProgress(listOf("a", "b", "c"), states)!!, 0.0001f)
+        assertNull(knownByteProgress(listOf("a", "b", "missing"), states))
+        val item = downloadOverview(listOf(book), states.mapValues { (_, state) ->
+            state.copy(status = DownloadStatus.COMPLETED)
+        }).single()
+        assertEquals(2, item.summary.completedTracks)
+        assertTrue(item.summary.complete)
+    }
+
+    @Test
     fun invalidByteCountersAreBoundedAndOverflowIsUnknown() {
         assertEquals(1f, knownByteProgress(listOf("a"), mapOf("a" to state(DownloadStatus.DOWNLOADING, 200, 100)))!!, 0f)
         assertEquals(0f, knownByteProgress(listOf("a"), mapOf("a" to state(DownloadStatus.DOWNLOADING, -1, 100)))!!, 0f)

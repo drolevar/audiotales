@@ -47,6 +47,9 @@ data class TrackEntity(
     val providerTrackRef: String? = null,
     val streamReferer: String? = null,
     val downloadReferer: String? = null,
+    @ColumnInfo(defaultValue = "0") val sourceStartMs: Long = 0,
+    val sourceEndMs: Long? = null,
+    val audioResourceId: String? = null,
 )
 
 @Entity(

@@ -289,24 +289,40 @@ internal class LibrarySessionCallback(
         )
         .build()
 
-    private suspend fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem = MediaItem.Builder()
-        .setMediaId(LibraryMediaIds.track(id))
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle(title)
-                .setAlbumTitle(library.getBook(bookId)?.title)
-                .setIsBrowsable(false)
-                .setIsPlayable(true)
-                .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
-                .setExtras(Bundle().apply { putString("bookId", bookId) })
-                .build(),
-        )
-        .apply {
-            if (includeLocation) {
-                storage.registerPlayback(this@toMediaItem)
-                setUri(uri)
-                setCustomCacheKey(id)
-            }
-        }
-        .build()
+    private suspend fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem =
+        toPlaybackMediaItem(library.getBook(bookId)?.title, storage, includeLocation)
 }
+
+/** Build only from repository-owned transport and bounds; player positions stay clip-relative. */
+@androidx.annotation.OptIn(UnstableApi::class)
+internal fun LibraryTrack.toPlaybackMediaItem(
+    bookTitle: String?,
+    storage: MediaStorage,
+    includeLocation: Boolean,
+): MediaItem = MediaItem.Builder()
+    .setMediaId(LibraryMediaIds.track(id))
+    .setMediaMetadata(
+        MediaMetadata.Builder()
+            .setTitle(title)
+            .setAlbumTitle(bookTitle)
+            .setIsBrowsable(false)
+            .setIsPlayable(true)
+            .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)
+            .setExtras(Bundle().apply { putString("bookId", bookId) })
+            .build(),
+    )
+    .apply {
+        if (includeLocation) {
+            require(sourceStartMs >= 0 && (sourceEndMs == null || sourceEndMs > sourceStartMs)) {
+                "Invalid audio range"
+            }
+            storage.registerPlayback(this@toPlaybackMediaItem)
+            setUri(uri)
+            setCustomCacheKey(downloadId)
+            setClippingConfiguration(MediaItem.ClippingConfiguration.Builder()
+                .setStartPositionMs(sourceStartMs)
+                .setEndPositionMs(sourceEndMs ?: C.TIME_END_OF_SOURCE)
+                .build())
+        }
+    }
+    .build()

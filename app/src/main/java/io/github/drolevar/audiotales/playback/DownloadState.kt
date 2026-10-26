@@ -6,6 +6,8 @@ data class TrackDownloadState(
     val status: DownloadStatus,
     val bytesDownloaded: Long = 0,
     val totalBytes: Long = -1,
+    /** Shared physical download identity; null keeps legacy per-track callers compatible. */
+    val resourceId: String? = null,
 )
 
 data class BookDownloadSummary(

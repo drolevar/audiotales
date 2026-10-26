@@ -91,6 +91,11 @@ interface LibraryDao {
         require(stored.map { it.providerTrackRef }.toSet() == byReference.keys)
         stored.forEach { track ->
             val refreshed = requireNotNull(byReference[track.providerTrackRef])
+            require(track.sourceStartMs == refreshed.sourceStartMs)
+            // Old whole-file rows remain whole-file rows when the provider adds an end.
+            require(track.sourceEndMs == refreshed.sourceEndMs ||
+                track.sourceStartMs == 0L && track.sourceEndMs == null && track.audioResourceId == null)
+            require(track.audioResourceId == null || track.audioResourceId == refreshed.audioResourceId)
             require(updateTrackTransport(track.id, bookId, refreshed.uri, refreshed.streamReferer, refreshed.downloadReferer) == 1)
         }
     }

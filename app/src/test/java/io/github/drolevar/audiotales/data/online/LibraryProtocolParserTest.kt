@@ -11,6 +11,27 @@ class LibraryProtocolParserTest {
     private val source = OnlineLibrary(LibraryProtocolParser.libraryId(base), base.toString(), "Library", LibraryProtocol.PARTNER)
     private val metadata = """{"id":42,"namebook":"A &amp; B","author":"Author","short_story":"<p>Description</p>"}"""
 
+    @Test fun partnerSectionsSharingOneRecordingResolveAsCompleteOrderedTracks() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        val tracks = LibraryProtocolParser.partnerResolution(source, book, """[
+            {"title":"One","file":"https://cdn.example/book.mp3","start":0,"end":290},
+            {"title":"Two","file":"https://cdn.example/book.mp3","start":290,"end":487},
+            {"title":"Three","file":"https://cdn.example/book.mp3","start":487,"end":735},
+            {"title":"Four","file":"https://cdn.example/book.mp3","start":735,"end":863}
+        ]""").tracks
+        assertEquals(listOf("One", "Two", "Three", "Four"), tracks.map { it.title })
+        assertEquals(listOf(0, 1, 2, 3), tracks.map { it.sequenceIndex })
+        assertEquals(listOf(290_000L, 197_000L, 248_000L, 128_000L), tracks.map { it.durationMs })
+        assertEquals(4, tracks.map { it.id }.distinct().size)
+        assertEquals(4, tracks.map { it.providerTrackRef }.distinct().size)
+        assertEquals(listOf(0L, 290_000L, 487_000L, 735_000L), tracks.map { it.sourceStartMs })
+        assertEquals(listOf(290_000L, 487_000L, 735_000L, 863_000L), tracks.map { it.sourceEndMs })
+        assertEquals(1, tracks.map { it.downloadId }.distinct().size)
+        assertNotEquals(tracks.first().id, tracks.first().downloadId)
+        assertEquals(listOf("/book.mp3#t=0-290000", "/book.mp3#t=290000-487000",
+            "/book.mp3#t=487000-735000", "/book.mp3#t=735000-863000"), tracks.map { it.providerTrackRef })
+    }
+
     @Test fun configurableInstanceNormalizesRootAndKeepsDifferentLibrariesDistinct() {
         assertEquals(base, LibraryProtocolParser.baseUrl(" https://LIBRARY.example/ "))
         assertNotEquals(source.id, LibraryProtocolParser.libraryId(LibraryProtocolParser.baseUrl("https://another.example")))
@@ -38,7 +59,7 @@ class LibraryProtocolParserTest {
         assertNotEquals(original.uri, refreshed.uri)
         assertEquals("https://library.example/mobapp", original.streamReferer)
         assertEquals("https://library.example/", original.downloadReferer)
-        assertNull(original.durationMs)
+        assertEquals(1_403_000L, original.durationMs)
     }
 
     @Test fun malformedOrUnsafePlaylistsCannotProducePartialBooks() {
@@ -48,6 +69,91 @@ class LibraryProtocolParserTest {
             """[{"title":"One","file":"https://cdn.example/a.mp3"},{"title":"Two","file":"https://cdn.example/a.mp3"}]""").forEach {
             assertThrows(OnlineBookException::class.java) { LibraryProtocolParser.partnerResolution(source, book, it) }
         }
+    }
+
+    @Test fun malformedAmbiguousOrOverlappingRangesCannotProducePartialBooks() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        val invalidFields = listOf(
+            "\"start\":-1,\"end\":290", "\"start\":0,\"end\":-1",
+            "\"start\":\"NaN\",\"end\":290", "\"start\":0,\"end\":\"Infinity\"",
+            "\"start\":\"wrong\",\"end\":290", "\"start\":null,\"end\":290",
+            "\"start\":false,\"end\":290", "\"start\":{},\"end\":290",
+            "\"start\":0,\"end\":null", "\"start\":1,\"end\":1",
+            "\"start\":2,\"end\":1", "\"start\":0.0001,\"end\":290",
+            "\"start\":0,\"end\":9223372036854775807", "\"start\":1",
+            "\"start\":0,\"end\":\"1e100000000\"", "\"start\":\"1e-100000000\",\"end\":290",
+        )
+        invalidFields.forEach { fields ->
+            assertThrows(fields, OnlineBookException::class.java) {
+                LibraryProtocolParser.partnerResolution(source, book,
+                    """[{"title":"One","file":"https://cdn.example/book.mp3",$fields}]""")
+            }
+        }
+        val first = """{"title":"One","file":"https://cdn.example/book.mp3","start":0,"end":290}"""
+        listOf(
+            "\"start\":0,\"end\":290", "\"start\":289,\"end\":487", "\"start\":290",
+        ).forEach { fields ->
+            assertThrows(OnlineBookException::class.java) {
+                LibraryProtocolParser.partnerResolution(source, book,
+                    """[$first,{"title":"Two","file":"https://cdn.example/book.mp3",$fields}]""")
+            }
+        }
+    }
+
+    @Test fun partnerMillisecondsAreExactAndUniqueZeroStartKeepsLegacyIdentity() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        fun resolve(fields: String) = LibraryProtocolParser.partnerResolution(source, book,
+            """[{"title":"One","file":"https://cdn.example/book.mp3"$fields}]""").tracks.single()
+        val legacy = resolve("")
+        val bounded = resolve(",\"start\":\"0.000\",\"end\":\"290.125\"")
+        assertEquals(legacy.id, bounded.id)
+        assertEquals(legacy.providerTrackRef, bounded.providerTrackRef)
+        assertEquals(legacy.downloadId, bounded.downloadId)
+        assertEquals(290_125L, bounded.durationMs)
+        assertEquals(290_125L, bounded.sourceEndMs)
+        assertNull(legacy.durationMs)
+    }
+
+    @Test fun sectionAndResourceIdentitySurviveTransportHostAndQueryChanges() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        fun resolve(host: String, query: String) = LibraryProtocolParser.partnerResolution(source, book, """[
+            {"title":"One","file":"https://$host/book.mp3?$query","start":0,"end":290},
+            {"title":"Two","file":"https://$host/book.mp3?$query","start":290,"end":487}
+        ]""").tracks
+        val original = resolve("old.example", "token=old")
+        val renewed = resolve("new.example", "token=new")
+        assertEquals(original.map { it.id }, renewed.map { it.id })
+        assertEquals(original.map { it.providerTrackRef }, renewed.map { it.providerTrackRef })
+        assertEquals(original.map { it.downloadId }, renewed.map { it.downloadId })
+        assertNotEquals(original.map { it.uri }, renewed.map { it.uri })
+        val legacy = LibraryProtocolParser.partnerResolution(source, book,
+            """[{"title":"Whole file","file":"https://old.example/book.mp3"}]""").tracks.single()
+        assertEquals(legacy.id, original.first().downloadId)
+    }
+
+    @Test fun samePathSectionsCannotShareAResourceAcrossDifferentPlaylistUrls() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        listOf("https://different.example/book.mp3?token=one", "https://cdn.example/book.mp3?token=two")
+            .forEach { secondUrl ->
+                assertThrows(OnlineBookException::class.java) {
+                    LibraryProtocolParser.partnerResolution(source, book, """[
+                        {"title":"One","file":"https://cdn.example/book.mp3?token=one","start":0,"end":290},
+                        {"title":"Two","file":"$secondUrl","start":290,"end":487}
+                    ]""")
+                }
+            }
+    }
+
+    @Test fun nonzeroSingleRangeHasStableSectionAndWholeResourceIdentity() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        val track = LibraryProtocolParser.partnerResolution(source, book,
+            """[{"title":"Excerpt","file":"https://cdn.example/book.mp3","start":"290.125","end":"487.250"}]""")
+            .tracks.single()
+        assertEquals(290_125L, track.sourceStartMs)
+        assertEquals(487_250L, track.sourceEndMs)
+        assertEquals(197_125L, track.durationMs)
+        assertEquals("/book.mp3#t=290125-487250", track.providerTrackRef)
+        assertNotEquals(track.id, track.downloadId)
     }
 
     @Test fun librivoxOrdersBySectionNumberNotIdsAndRequiresCompleteTrackSet() {

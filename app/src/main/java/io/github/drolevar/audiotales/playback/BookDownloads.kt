@@ -37,11 +37,11 @@ class BookDownloads @Inject constructor(
     private val listener = object : DownloadManager.Listener {
         override fun onDownloadChanged(manager: DownloadManager, download: Download, finalException: Exception?) {
             pendingAdditions.remove(download.request.id)
-            _state.update { it + (download.request.id to storage.state(download, manager.downloadsPaused)) }
+            updateDownload(download, manager.downloadsPaused)
         }
         override fun onDownloadRemoved(manager: DownloadManager, download: Download) {
             pendingAdditions.remove(download.request.id)
-            _state.update { it - download.request.id }
+            _state.update { it.withoutResource(download.request.id) }
         }
     }
 
@@ -55,7 +55,7 @@ class BookDownloads @Inject constructor(
         val saved = withContext(Dispatchers.IO) {
             buildMap {
                 storage.index.getDownloads().use { cursor ->
-                    while (cursor.moveToNext()) put(cursor.download.request.id, storage.state(cursor.download, managerPaused))
+                    while (cursor.moveToNext()) putAll(storage.states(cursor.download, managerPaused))
                 }
             }
         }
@@ -68,13 +68,13 @@ class BookDownloads @Inject constructor(
         val tracks = library.getTracks(bookId)
         require(tracks.isNotEmpty()) { "Book has no tracks" }
         withContext(Dispatchers.Main.immediate) {
-            tracks.forEach { track ->
-                if (_state.value[track.id]?.status != DownloadStatus.COMPLETED) {
-                    pendingAdditions.add(track.id)
+            tracks.groupBy { it.downloadId }.forEach { (resourceId, members) ->
+                if (resourceId !in pendingAdditions && members.any { _state.value[it.id]?.status != DownloadStatus.COMPLETED }) {
+                    pendingAdditions.add(resourceId)
                     try {
-                        DownloadService.sendAddDownload(context, AudioDownloadService::class.java, storage.downloadRequest(track), true)
+                        DownloadService.sendAddDownload(context, AudioDownloadService::class.java, storage.downloadRequest(members), true)
                     } catch (error: RuntimeException) {
-                        pendingAdditions.remove(track.id)
+                        pendingAdditions.remove(resourceId)
                         throw error
                     }
                 }
@@ -86,7 +86,7 @@ class BookDownloads @Inject constructor(
 
     suspend fun refreshProgress() = withContext(Dispatchers.Main.immediate) {
         storage.downloadManager.currentDownloads.forEach { download ->
-            _state.update { it + (download.request.id to storage.state(download, storage.downloadManager.downloadsPaused)) }
+            updateDownload(download, storage.downloadManager.downloadsPaused)
         }
     }
 
@@ -96,8 +96,8 @@ class BookDownloads @Inject constructor(
         withContext(Dispatchers.Main.immediate) {
             tracks.filter {
                 _state.value[it.id]?.status in setOf(DownloadStatus.QUEUED, DownloadStatus.DOWNLOADING)
-            }.forEach {
-                DownloadService.sendSetStopReason(context, AudioDownloadService::class.java, it.id, 1, true)
+            }.map { it.downloadId }.distinct().forEach { resourceId ->
+                DownloadService.sendSetStopReason(context, AudioDownloadService::class.java, resourceId, 1, true)
             }
         }
     }
@@ -106,8 +106,9 @@ class BookDownloads @Inject constructor(
         initialize()
         val tracks = library.getTracks(bookId)
         withContext(Dispatchers.Main.immediate) {
-            tracks.filter { it.id in _state.value }.forEach {
-                DownloadService.sendRemoveDownload(context, AudioDownloadService::class.java, it.id, true)
+            tracks.filter { it.id in _state.value || it.downloadId in pendingAdditions }
+                .map { it.downloadId }.distinct().forEach { resourceId ->
+                DownloadService.sendRemoveDownload(context, AudioDownloadService::class.java, resourceId, true)
             }
         }
     }
@@ -122,20 +123,23 @@ class BookDownloads @Inject constructor(
     suspend fun removeBookAndAwait(bookId: String, afterRemoval: suspend () -> Unit = {}) = mutations.withLock {
         val removed = withTimeoutOrNull(REMOVAL_TIMEOUT_MS) {
             initialize()
-            val trackIds = library.getTracks(bookId).map { it.id }.toSet()
-            if (trackIds.isEmpty()) return@withTimeoutOrNull true
+            val tracks = library.getTracks(bookId)
+            val trackIds = tracks.map { it.id }.toSet()
+            // Include legacy per-track keys as well as shared resource keys for orphan cleanup.
+            val resourceIds = tracks.map { it.downloadId }.toSet() + trackIds
+            if (resourceIds.isEmpty()) return@withTimeoutOrNull true
 
             // Let prior add intents reach Media3 before deciding which tracks have downloads.
             while (!withContext(Dispatchers.Main.immediate) {
-                storage.downloadManager.isInitialized && pendingAdditions.none { it in trackIds }
+                storage.downloadManager.isInitialized && pendingAdditions.none { it in resourceIds }
             }) delay(REMOVAL_POLL_MS)
 
             val indexedRequests = withContext(Dispatchers.IO) {
-                trackIds.mapNotNull { storage.index.getDownload(it)?.request }
+                resourceIds.mapNotNull { storage.index.getDownload(it)?.request }
             }
             val requests = withContext(Dispatchers.Main.immediate) {
                 (indexedRequests + storage.downloadManager.currentDownloads
-                    .filter { it.request.id in trackIds }.map { it.request }).distinctBy { it.id }
+                    .filter { it.request.id in resourceIds }.map { it.request }).distinctBy { it.id }
             }
             withContext(Dispatchers.Main.immediate) {
                 requests.forEach { request ->
@@ -144,28 +148,36 @@ class BookDownloads @Inject constructor(
             }
             while (true) {
                 val recordsGone = withContext(Dispatchers.IO) {
-                    trackIds.all { storage.index.getDownload(it) == null }
+                    resourceIds.all { storage.index.getDownload(it) == null }
                 }
                 val tasksGone = withContext(Dispatchers.Main.immediate) {
-                    storage.downloadManager.currentDownloads.none { it.request.id in trackIds }
+                    storage.downloadManager.currentDownloads.none { it.request.id in resourceIds }
                 }
                 if (recordsGone && tasksGone) break
                 delay(REMOVAL_POLL_MS)
             }
             withContext(Dispatchers.IO) {
                 // Retry also cleans orphan spans if Media3 removed a record but cache cleanup failed.
-                val cacheKeys = trackIds + requests.map { it.customCacheKey ?: it.id }
+                val cacheKeys = resourceIds + requests.map { it.customCacheKey ?: it.id }
                 cacheKeys.forEach { storage.cache.removeResource(it) }
                 check(cacheKeys.all { storage.cache.getCachedSpans(it).isEmpty() }) {
                     "Could not remove all downloaded audio; try removing the book again"
                 }
             }
-            _state.update { it - trackIds }
+            _state.update { states -> states.filter { (id, state) -> id !in trackIds && state.resourceId !in resourceIds } }
             true
         }
         check(removed == true) { "Download removal timed out; try removing the book again" }
         afterRemoval()
     }
+
+    private fun updateDownload(download: Download, managerPaused: Boolean) {
+        val states = storage.states(download, managerPaused)
+        _state.update { it.withoutResource(download.request.id) + states }
+    }
+
+    private fun Map<String, TrackDownloadState>.withoutResource(resourceId: String): Map<String, TrackDownloadState> =
+        filter { (id, state) -> id != resourceId && state.resourceId != resourceId }
 
     private companion object {
         const val REMOVAL_TIMEOUT_MS = 30_000L

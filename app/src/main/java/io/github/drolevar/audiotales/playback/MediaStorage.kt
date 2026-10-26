@@ -71,14 +71,30 @@ class MediaStorage @Inject constructor(@ApplicationContext context: Context) {
     }
 
     fun registerPlayback(track: LibraryTrack) {
-        streamingHeaders[track.id] = PlaybackHeaders(track.streamReferer?.takeIf(String::isNotBlank))
+        streamingHeaders[track.downloadId] = PlaybackHeaders(track.streamReferer?.takeIf(String::isNotBlank))
     }
 
-    fun downloadRequest(track: LibraryTrack): DownloadRequest = DownloadRequest.Builder(track.id, track.uri.toUri())
-        .setMimeType("audio/mpeg")
-        .setCustomCacheKey(track.id)
-        .setData(json.encodeToString(DownloadMetadata(track.bookId, track.streamReferer, track.downloadReferer)).toByteArray())
-        .build()
+    /** Download the complete resource once, retaining all logical tracks in persistent metadata. */
+    fun downloadRequest(tracks: List<LibraryTrack>): DownloadRequest {
+        val track = tracks.first()
+        require(tracks.all { it.bookId == track.bookId && it.downloadId == track.downloadId && it.uri == track.uri }) {
+            "A download must contain one book's audio resource"
+        }
+        return DownloadRequest.Builder(track.downloadId, track.uri.toUri())
+            .setMimeType("audio/mpeg")
+            .setCustomCacheKey(track.downloadId)
+            .setData(json.encodeToString(DownloadMetadata(track.bookId, track.streamReferer,
+                track.downloadReferer, tracks.map { it.id }.distinct())).toByteArray())
+            .build()
+    }
+
+    /** Old index entries have no member list and retain their original track-based identity. */
+    fun states(download: Download, managerPaused: Boolean = false): Map<String, TrackDownloadState> {
+        val trackIds = readMetadata(download.request.data)?.trackIds?.takeIf { it.isNotEmpty() }
+            ?: listOf(download.request.id)
+        val state = state(download, managerPaused)
+        return trackIds.associateWith { state }
+    }
 
     fun state(download: Download, managerPaused: Boolean = false): TrackDownloadState {
         val state = when (download.state) {
@@ -94,7 +110,7 @@ class MediaStorage @Inject constructor(@ApplicationContext context: Context) {
             Download.STATE_STOPPED -> DownloadStatus.PAUSED
             else -> if (managerPaused) DownloadStatus.PAUSED else DownloadStatus.QUEUED
         }
-        return TrackDownloadState(state, download.bytesDownloaded, download.contentLength)
+        return TrackDownloadState(state, download.bytesDownloaded, download.contentLength, download.request.id)
     }
 
     private fun readMetadata(bytes: ByteArray): DownloadMetadata? = try {
@@ -106,5 +122,10 @@ class MediaStorage @Inject constructor(@ApplicationContext context: Context) {
     private data class PlaybackHeaders(val referer: String?)
 
     @Serializable
-    private data class DownloadMetadata(val bookId: String, val streamReferer: String?, val downloadReferer: String?)
+    private data class DownloadMetadata(
+        val bookId: String,
+        val streamReferer: String?,
+        val downloadReferer: String?,
+        val trackIds: List<String> = emptyList(),
+    )
 }

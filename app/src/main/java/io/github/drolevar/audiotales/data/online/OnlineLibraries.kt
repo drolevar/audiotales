@@ -170,7 +170,8 @@ internal class OnlineLibraries @Inject constructor(
         ) unexpectedProtocol()
         dao.refreshTrackSources(bookId, refreshed.tracks.map { track ->
             TrackEntity(track.id, bookId, track.title, track.uri, track.sequenceIndex, track.durationMs,
-                track.providerTrackRef, track.streamReferer, track.downloadReferer)
+                track.providerTrackRef, track.streamReferer, track.downloadReferer,
+                track.sourceStartMs, track.sourceEndMs, track.audioResourceId)
         })
     }
 

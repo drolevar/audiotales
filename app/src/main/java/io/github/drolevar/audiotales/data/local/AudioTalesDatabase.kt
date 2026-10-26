@@ -11,7 +11,7 @@ import androidx.room3.RoomDatabase
         BookmarkEntity::class,
         OnlineLibraryEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class AudioTalesDatabase : RoomDatabase() {
