@@ -1,25 +1,25 @@
 # Implementation roadmap
 
-Updated on 2026-10-25 after implementation of the first online-library listening flow. This document describes sequencing and acceptance boundaries; Beads remains the task-status source. [Accepted decisions](DECISIONS.md) govern the product, and the [development guide](DEVELOPMENT.md#online-library-flow-verification--2026-10-25) records evidence.
+Updated on 2026-10-26 after completing the native Figma design audit. This document describes sequencing and acceptance boundaries; Beads remains the task-status source. [Accepted decisions](DECISIONS.md) govern the product, and the [development guide](DEVELOPMENT.md#online-library-flow-verification--2026-10-25) records evidence.
 
 ## What exists
 
 | Area | Implemented | Remaining qualification or features |
 | --- | --- | --- |
 | Libraries | Configurable HTTPS library registration, shared partner protocol, separate LibriVox.org API, grouped catalogue/search/pagination, source selection/management, book inspection and stable-ID saving | Public partner-access arrangement, broader provider compatibility |
-| Persistence | Room schemas 1–6; additive migration and historical-provider repair; atomic deduplication; stable track-source renewal; saved description/language; progress and bookmark storage | Bookmark UI, embedded chapters, replacement/removal semantics |
-| Playback | One service-owned player; native Media3 controls; track selection, seeking and speed; periodic/transition progress; explicit source Retry | API 26/current OS, audio focus/headsets, physical-device and controller integration coverage; sleep timer |
+| Persistence | Room schemas 1–6; additive migration and historical-provider repair; atomic deduplication; stable track-source renewal; saved description/language; progress and bookmark storage | Bookmark UI, embedded chapters and source replacement semantics |
+| Playback | One service-owned player; native Media3 controls; track selection, seeking and speed; periodic/transition progress; explicit source Retry; service-owned sleep timer and complete saved-book removal | Audio focus/headsets, physical-device and broader controller integration coverage |
 | Downloads | Media3 download service/index/cache; real state/progress; pause/resume/retry/removal; complete-track-set availability | Broader storage-pressure, reboot, scheduler and network-transition coverage |
-| UI | Adaptive My books/Browse/Settings; Material controls, lifecycle-aware state, theme persistence; fitted covers; saved-collection controls, Downloads overview, Browse/library management and full book details | Remaining player tools, fuller accessibility/platform coverage |
-| Verification | Parser/network/resolver/download-state unit tests; Android migration/storage tests; API 35 online and offline restart/resume checks | Android Auto/DHU, Bluetooth, API 26/current OS and release/R8 validation |
+| UI | Adaptive My books/Browse/Settings; Material controls, lifecycle-aware state, theme persistence; fitted covers; saved-collection controls, Downloads overview, Browse/library management and full book details; focused player and native tool sheets; six-screen design audit complete | Broader assistive-technology and physical-device coverage |
+| Verification | Parser/network/resolver/download-state unit tests; Android migration/storage tests; API 35 online and offline restart/resume checks; bounded API 26/37.2 UI and player tests | Android Auto/DHU, Bluetooth, broader playback lifecycle and release/R8 validation |
 
 The earlier fixed-host HTML prototype has been superseded. Only provider request/response facts were reused from the legacy investigation; native app behavior was chosen independently. LibriVox.org and the shared partner protocol have separate contracts. Full offline availability refers to every track the provider returned, not a guarantee that the recording contains the complete published book.
 
 Book and track identities are distinct and remain stable when source URLs change or downloads are removed. External playback requests resolve through application-owned repository IDs. No caller-provided URL or file path authorizes arbitrary media access. Tracks are not a substitute for an embedded chapter model.
 
-The milestones below retain the broader acceptance criteria for future qualification; successful API 35 checks do not complete every platform scenario. The project does not claim verified Android Auto, audio-focus, Bluetooth, API 26/current OS or reporting support. The pinned toolchain also retains the compatibility qualification recorded in the development guide.
+The milestones below retain the broader acceptance criteria for future qualification; successful API 35 checks do not complete every platform scenario. The project does not claim verified Android Auto, audio-focus, Bluetooth, comprehensive platform behavior or reporting support. The pinned toolchain also retains the compatibility qualification recorded in the development guide.
 
-Figma remains the target for content hierarchy and remaining screen capabilities, subject to native Android behavior and the approved My books/Browse/Settings navigation. The first listening flow is a completed functional slice, not completion of the design. My books is the saved collection; Browse owns discovery and search. Collection filters/sorting/progress and a Downloads overview are now implemented. Grouped Browse and library management use durable source selection and preserved saved-book identity. Full book details retain real descriptions offline and expose track selection and saving/listening/download actions. The remaining player tools and complete design audit still require implementation and verification.
+Figma defines the implemented content hierarchy and screen capabilities, subject to native Android behavior and the approved My books/Browse/Settings navigation. My books is the saved collection; Browse owns discovery and search. Collection filters/sorting/progress and a Downloads overview are implemented. Grouped Browse and library management use durable source selection and preserved saved-book identity. Full book details retain real descriptions offline and expose track selection and saving/listening/download actions. The focused player, service-owned sleep timer, native tools and mini-player timing are implemented. The [completed design audit](UI-DESIGN-ACCEPTANCE.md) maps all six screens and supporting states to evidence; the broader product qualification below remains separate.
 
 ## Proposed milestones
 
