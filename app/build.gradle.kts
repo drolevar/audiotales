@@ -93,6 +93,7 @@ dependencies {
 
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.session)
+    // Keep handlers for pending jobs from earlier builds; new restarts use PlatformScheduler.
     implementation(libs.androidx.media3.exoplayer.workmanager)
     implementation(libs.androidx.media3.database)
     implementation(libs.androidx.media3.datasource)
