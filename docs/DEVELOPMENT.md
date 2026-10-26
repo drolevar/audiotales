@@ -2,7 +2,7 @@
 
 Start with [Decisions and scope](DECISIONS.md) for the agreed direction. The repository's main README is written for listeners; keep development details in `docs/`.
 
-For UI work, follow the two [accepted Figma design references and native-control policy](DECISIONS.md#12-ui-design-and-implementation-references--accepted-2026-10-25). Inspect the relevant screen and reusable components through Figma MCP before implementing them in native Compose. Native Android behavior takes priority over exact visual fidelity; use Google's existing controls where they cover the required behavior, including Media3's Compose playback controls. The [UI architecture proposal](UI-ARCHITECTURE.md) describes the recommended translation and identifies screen-level choices that remain proposed.
+For UI work, follow the [accepted light, dark and reusable Figma references and native-control policy](DECISIONS.md#12-ui-design-and-implementation-references--accepted-2026-10-25). Inspect the relevant screen and reusable components through Figma MCP before implementing them in native Compose. Native Android behavior takes priority over exact visual fidelity; use Google's existing controls where they cover the required behavior, including Media3's Compose playback controls. The [UI architecture proposal](UI-ARCHITECTURE.md) describes the recommended translation and identifies screen-level choices that remain proposed.
 
 ## Current implementation
 
@@ -340,6 +340,14 @@ These checks establish metadata loading and emulator playback/cache behavior for
 The shared cover component now makes its placeholder background transparent after a successful image load. Previously, square artwork fitted inside the 56 × 80 dp list slot exposed colored strips above and below the image. Figma My books node `34:1126` uses fitted artwork with a transparent wrapper. Loading, missing and failed artwork retain the existing placeholder frame and book icon.
 
 The debug build, lint and all **114 JVM tests** passed in **1m 44s**; lint reported **0 errors, 9 existing warnings and 1 hint**. Independent review found no actionable issues. API 26 visual checks covered My books and live Browse in light and dark themes, plus separate null-URL and failed-file artwork fixtures. Compared screenshot pixels confirm that the former top/bottom strips now match the row background while sampled square and portrait artwork pixels remain unchanged. These are inspected captures and focused pixel comparisons, not a golden-image suite. The owned emulator was stopped afterwards.
+
+### Mini-player separation and dark reference — 2026-10-26
+
+Fresh Figma reads of light mini-player instance `73:6546`, dark board `75:7666`, dark My books `75:7670` and its mini-player `75:7792` confirmed a stronger full-width band directly above navigation. The reusable base component still had its earlier color, so the current screen instances supplied the visual target. The native Surface and its inner ListItem now share `surfaceContainerHighest`; navigation retains its Material container color. This semantic adaptation follows purple and wallpaper themes. The dark board is recorded with the accepted design references.
+
+Independent review found no actionable issues. The JDK 21 debug build, lint, JVM tests and test-APK assembly passed in **1m 34s** with one Gradle worker and a 1536 MiB heap. All **114 JVM tests** passed; lint reported **0 errors, 9 existing warnings and 1 hint**. All **six existing mini-player Android tests passed on each API 26 and API 37.2** (4.213 and 16.943 seconds), including row/button and keyboard actions, live timing, compact layout, and a very long provider title at 200% text. The large-text captures from both platforms were inspected. Builds and emulators ran sequentially, and task emulators were stopped after verification.
+
+The API 37.2 application opened and paused a downloaded fixture book and displayed the mini-player in My books and Browse. Inspected captures confirmed separation above navigation in purple light/dark and wallpaper light/dark themes. Sampled mini-player/navigation pixels were respectively `#E6E0E9`/`#F3EDF7`, `#36343B`/`#211F26`, `#E1E2ED`/`#EDEDF6`, and `#23262E`/`#17191F`. These are focused visual and pixel checks, not golden comparisons or a full audit of every state in the new dark board.
 
 ## Release preparation
 

@@ -129,16 +129,19 @@ For each material decision change, record its date, reason, consequences, and wh
 
 ## 12. UI design and implementation references — accepted 2026-10-25
 
-Follow the user-selected **Audiotales — Paper v5** Figma design book for the application's UI. These two nodes are the canonical design references:
+Follow the user-selected **Audiotales — Paper v5** Figma design book for the application's UI. These nodes are the canonical design references:
 
 | Reference | Role |
 | --- | --- |
 | [Audiotales · Current design · v0.7.0](https://www.figma.com/design/LGhPAOlgrNdvcsUtrdBvqN/Audiotales--Paper-v5?node-id=27-404) | Main screen compositions and supporting states: My books, Search, Downloads, Manage libraries, Book details, and Now playing |
 | [Current UI / v0.7 reusable parts](https://www.figma.com/design/LGhPAOlgrNdvcsUtrdBvqN/Audiotales--Paper-v5?node-id=56-945) | Reusable icons, catalogue book row, and download row |
+| [Audiotales · Material 3 dark · v0.7.0](https://www.figma.com/design/LGhPAOlgrNdvcsUtrdBvqN/Audiotales--Paper-v5?node-id=75-7666) | Dark screen compositions and supporting states, supplied on 2026-10-26 |
 
 The user also supplied the [official Material 3 Design Kit](https://www.figma.com/community/file/1035203688168086460/material-3-design-kit) on 2026-10-25. Use it as the Material component and design-token reference alongside the AudioTales compositions. The kit does not establish API availability in the project's pinned stable Compose or Media3 dependencies; verify that separately against current Android documentation.
 
-Access to the two AudioTales nodes, their names, structure and screenshots were verified through Figma MCP on 2026-10-25. The main board uses a 393 dp reference width and sample catalogue/playback data. Preserve the design's visual hierarchy, overall character and fitted, uncropped artwork while implementing with the accepted native Kotlin/Compose and stable Material 3 stack. The reference width is not a fixed device requirement. Retrieve current node-level design context and assets when implementing each screen.
+On 2026-10-26, the user updated the mini-player's visual separation from navigation and supplied the dark design book. The light instance `73:6546` and dark instance `75:7792` use a stronger full-width surface band immediately above navigation. Translate that distinction with Material's theme-aware `surfaceContainerHighest` for the mini-player and retain the navigation component's surface. Apply the same mini-player treatment wherever it appears. Existing native controls, timing, accessibility and adaptive sizing remain the behavioral contract.
+
+Access to the two original AudioTales nodes, their names, structure and screenshots were verified through Figma MCP on 2026-10-25. The main board uses a 393 dp reference width and sample catalogue/playback data. Preserve the design's visual hierarchy, overall character and fitted, uncropped artwork while implementing with the accepted native Kotlin/Compose and stable Material 3 stack. The reference width is not a fixed device requirement. Retrieve current node-level design context and assets when implementing each screen.
 
 Clarified by the user on 2026-10-25: **native Android behavior takes priority over 100% fidelity to Figma**. Prefer Google-native or Google-endorsed modern practices. Where Google provides a control that covers the required behavior, use it and customize through its supported theming and composition APIs instead of recreating it to match the mockup. In particular, use Media3's Compose controls for playback. Apply this rule to navigation, search, selection, sheets, dialogs and other comparable UI decisions. A custom control needs a concrete behavioral gap in the provided controls, not merely a visual difference. Keep the accepted stable dependency policy; this preference does not authorize preview upgrades or replace the previously accepted architecture.
 

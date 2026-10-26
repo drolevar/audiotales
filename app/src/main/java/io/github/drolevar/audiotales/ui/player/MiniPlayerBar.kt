@@ -63,9 +63,10 @@ internal fun MiniPlayerBarContent(
     onOpenBook: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainer) {
+    val containerColor = MaterialTheme.colorScheme.surfaceContainerHighest
+    Surface(modifier = modifier, color = containerColor) {
         ListItem(
-            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            colors = ListItemDefaults.colors(containerColor = containerColor),
             headlineContent = { Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis) },
             supportingContent = { MiniPlayerSubtitle(player, trackTitle) },
             leadingContent = {
