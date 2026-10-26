@@ -86,6 +86,7 @@ internal class BookPlayerViewModel internal constructor(
     private var actionJob: Job? = null
     private var currentBookId: String? = null
     private var visible = false
+    private var metadataGeneration = 0L
 
     fun activate(bookId: String) {
         visible = true
@@ -95,6 +96,8 @@ internal class BookPlayerViewModel internal constructor(
 
     fun deactivate() {
         visible = false
+        metadataGeneration++
+        _state.update { it.copy(metadataRefreshing = false) }
         loadJob?.cancel()
         downloadsJob?.cancel()
         metadataJob?.cancel()
@@ -103,6 +106,7 @@ internal class BookPlayerViewModel internal constructor(
 
     fun load(bookId: String) {
         if (_state.value.removingBook) return
+        metadataGeneration++
         actionJob?.cancel()
         metadataJob?.cancel()
         downloadsJob?.cancel()
@@ -129,22 +133,26 @@ internal class BookPlayerViewModel internal constructor(
     fun refreshMetadata() {
         val bookId = _state.value.book?.id ?: return
         if (metadataJob?.isActive == true || _state.value.removingBook || _state.value.removed) return
+        val generation = ++metadataGeneration
         _state.update { it.copy(metadataRefreshing = true, metadataFailed = false) }
         metadataJob = viewModelScope.launch {
             try {
-                val book = onlineLibraries.refreshBookMetadata(bookId) ?: return@launch
+                onlineLibraries.refreshBookMetadata(bookId) ?: return@launch
+                val tracks = library.getTracks(bookId)
+                val book = library.getBook(bookId) ?: return@launch
                 currentCoroutineContext().ensureActive()
-                if (currentBookId == bookId) {
+                if (visible && currentBookId == bookId && metadataGeneration == generation && tracks.isNotEmpty()) {
                     _state.update { state ->
-                        if (state.book?.id == bookId) state.copy(book = book) else state
+                        if (state.book?.id == bookId && !state.removed && !state.removingBook)
+                            state.copy(book = book, tracks = tracks) else state
                     }
                 }
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {
-                if (currentBookId == bookId) _state.update { it.copy(metadataFailed = true) }
+                if (currentBookId == bookId && metadataGeneration == generation) _state.update { it.copy(metadataFailed = true) }
             } finally {
-                if (currentBookId == bookId) _state.update { it.copy(metadataRefreshing = false) }
+                if (currentBookId == bookId && metadataGeneration == generation) _state.update { it.copy(metadataRefreshing = false) }
             }
         }
     }

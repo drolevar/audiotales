@@ -27,7 +27,7 @@ object StorageModule {
     fun provideDatabase(@ApplicationContext context: Context): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, "audiotales.db")
             .setDriver(AndroidSQLiteDriver())
-            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6, LibraryMigrations.MIGRATION_6_7)
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6, LibraryMigrations.MIGRATION_6_7, LibraryMigrations.MIGRATION_7_8)
             .build()
 
     @Provides

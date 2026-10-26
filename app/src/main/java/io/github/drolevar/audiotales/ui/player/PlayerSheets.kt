@@ -18,6 +18,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import io.github.drolevar.audiotales.data.library.commonReaderCredits
+import io.github.drolevar.audiotales.data.library.readerCreditNames
 import io.github.drolevar.audiotales.R
 import io.github.drolevar.audiotales.playback.BookDownloadSummary
 import io.github.drolevar.audiotales.playback.DownloadStatus
@@ -58,6 +60,9 @@ internal fun PlayerInformationSheet(
         ) {
             Text(state.book?.displayTitle.orEmpty(), style = MaterialTheme.typography.titleLarge)
             state.book?.author?.takeIf(String::isNotBlank)?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            readerCreditNames(commonReaderCredits(state.tracks))?.let { names ->
+                Text(stringResource(R.string.reader_credit_read_by, names), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             Text(pluralStringResource(R.plurals.player_chapter_count, state.tracks.size, state.tracks.size))
             state.book?.language?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             Text(state.book?.description?.takeIf(String::isNotBlank) ?: stringResource(R.string.player_no_description), style = MaterialTheme.typography.bodyMedium)
@@ -153,7 +158,10 @@ internal fun PlayerTracksSheet(
                             track.durationMs?.takeIf { it > 0 }?.let(::playerDurationLabel),
                             if (state.downloadsReady) downloads[track.id]?.status?.let { stringResource(playerTrackDownloadString(it)) } else null,
                         )
-                        if (details.isNotEmpty()) Text(details.joinToString(" · "))
+                        Column {
+                            if (details.isNotEmpty()) Text(details.joinToString(" · "))
+                            readerCreditNames(track.readerCredits)?.let { Text(stringResource(R.string.reader_credit_read_by, it)) }
+                        }
                     },
                     leadingContent = { Text((index + 1).toString()) },
                     trailingContent = { Icon(painterResource(if (current) R.drawable.ic_check else R.drawable.ic_play), null) },

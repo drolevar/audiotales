@@ -81,6 +81,31 @@ interface LibraryDao {
     @Query("UPDATE tracks SET uri = :uri, streamReferer = :streamReferer, downloadReferer = :downloadReferer WHERE id = :trackId AND bookId = :bookId")
     suspend fun updateTrackTransport(trackId: String, bookId: String, uri: String, streamReferer: String?, downloadReferer: String?): Int
 
+    @Query("UPDATE tracks SET readerCreditsJson = :creditsJson WHERE id = :trackId AND bookId = :bookId")
+    suspend fun updateTrackReaderCredits(trackId: String, bookId: String, creditsJson: String): Int
+
+    /** All section identities must match before any optional attribution changes. Null preserves. */
+    @Transaction
+    suspend fun refreshTrackReaderCredits(
+        bookId: String,
+        providerId: String,
+        providerBookId: String,
+        assignments: Map<String, String?>,
+    ): Boolean {
+        val book = getBook(bookId) ?: return false
+        if (book.providerId != providerId || book.providerBookId != providerBookId) return false
+        val stored = getTracks(bookId)
+        val refs = stored.map { it.providerTrackRef }
+        if (stored.isEmpty() || stored.size != assignments.size || refs.any { it.isNullOrBlank() } ||
+            refs.toSet().size != stored.size || refs.toSet() != assignments.keys) return false
+        stored.forEach { track ->
+            assignments[requireNotNull(track.providerTrackRef)]?.let { credits ->
+                check(updateTrackReaderCredits(track.id, bookId, credits) == 1)
+            }
+        }
+        return true
+    }
+
     /** Source renewal changes transport only, never identity, order, progress or bookmarks. */
     @Transaction
     suspend fun refreshTrackSources(bookId: String, replacements: List<TrackEntity>) {

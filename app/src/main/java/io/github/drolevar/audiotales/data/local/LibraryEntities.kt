@@ -50,6 +50,7 @@ data class TrackEntity(
     @ColumnInfo(defaultValue = "0") val sourceStartMs: Long = 0,
     val sourceEndMs: Long? = null,
     val audioResourceId: String? = null,
+    val readerCreditsJson: String? = null,
 )
 
 @Entity(

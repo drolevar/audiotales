@@ -80,6 +80,7 @@ class SavedBookDeletionTest {
     private fun openDatabase(name: String): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, name)
             .setDriver(AndroidSQLiteDriver())
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6, LibraryMigrations.MIGRATION_6_7, LibraryMigrations.MIGRATION_7_8)
             .build()
 
     private suspend fun withDatabase(name: String, block: suspend (AudioTalesDatabase) -> Unit) {

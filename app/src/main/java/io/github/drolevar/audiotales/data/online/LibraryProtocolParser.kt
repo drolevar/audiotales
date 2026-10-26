@@ -1,6 +1,8 @@
 package io.github.drolevar.audiotales.data.online
 
 import io.github.drolevar.audiotales.data.library.LibraryTrack
+import io.github.drolevar.audiotales.data.library.ReaderCredit
+import io.github.drolevar.audiotales.data.library.ReaderCreditsCodec
 import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
 import java.net.URI
 import java.security.MessageDigest
@@ -138,6 +140,22 @@ internal object LibraryProtocolParser {
     fun librivoxMetadata(source: OnlineLibrary, remoteId: String, text: String): CatalogueBook =
         librivoxBook(source, librivoxItem(remoteId, text))
 
+    /** Parse the complete section identity set independently of audio URLs, titles or playability. */
+    fun librivoxReaderAssignments(remoteId: String, text: String): Map<String, List<ReaderCredit>?>? {
+        val item = librivoxItem(remoteId, text)
+        val sections = item["sections"] as? JsonArray ?: return null
+        val count = item.text("num_sections")?.toIntOrNull() ?: return null
+        if (count !in 1..2000 || sections.size != count) return null
+        val result = linkedMapOf<String, List<ReaderCredit>?>()
+        for (element in sections) {
+            val section = element as? JsonObject ?: return null
+            val ref = section.text("id")?.takeIf { Regex("[1-9][0-9]{0,19}").matches(it) } ?: return null
+            if (result.containsKey(ref)) return null
+            result[ref] = ReaderCreditsCodec.fromProviderJson(section["readers"])
+        }
+        return result
+    }
+
     private fun librivoxItem(remoteId: String, text: String): JsonObject {
         val rows = objectValue(text)["books"] as? JsonArray ?: unexpectedProtocol()
         val item = rows.singleOrNull() as? JsonObject ?: unexpectedProtocol()
@@ -166,6 +184,7 @@ internal object LibraryProtocolParser {
                 id = "$id:$ref", bookId = id, title = title(section.requiredText("title")),
                 uri = httpsUrl(section.requiredText("listen_url")).toString(), sequenceIndex = index,
                 durationMs = seconds?.times(1000), providerTrackRef = ref,
+                readerCredits = ReaderCreditsCodec.fromProviderJson(section["readers"]),
             )
         }
         return ResolvedOnlineBook(id, source.id, remoteId, book.sourceUrl ?: unexpectedProtocol(), book.title, book.author, tracks,

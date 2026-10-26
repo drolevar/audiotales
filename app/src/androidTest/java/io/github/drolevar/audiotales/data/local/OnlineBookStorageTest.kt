@@ -7,6 +7,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import io.github.drolevar.audiotales.data.library.LibraryCollectionEntry
 import io.github.drolevar.audiotales.data.library.LibraryTrack
+import io.github.drolevar.audiotales.data.library.ReaderCredit
+import io.github.drolevar.audiotales.data.library.ReaderCreditsCodec
 import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
 import io.github.drolevar.audiotales.data.library.RoomLibraryRepository
 import io.github.drolevar.audiotales.data.online.LibraryProtocolParser
@@ -381,9 +383,12 @@ class OnlineBookStorageTest {
                 assertEquals(source.id, restored.id)
                 assertEquals("My classics", restored.displayName)
                 assertTrue(restored.isSelected)
-                assertEquals(1, requests) // Existing sources do not repeat provider validation.
+                assertEquals(2, requests) // Restoring a hidden source validates its catalogue again.
                 online.setLibrarySelected(source.id, false)
                 assertTrue(online.addLibrary(source.baseUrl).isSelected)
+                assertEquals(3, requests) // Re-enabling an unselected source also validates before persistence.
+                assertTrue(online.addLibrary(source.baseUrl).isSelected)
+                assertEquals(3, requests) // An already registered and selected source needs no further probe.
                 assertEquals(1, online.observeLibraries().first().size)
                 assertEquals(original, dao.getBook(saved.id))
                 assertEquals(PlaybackProgressEntity(saved.id, track.id, 45000, 10000), dao.getProgress(saved.id))
@@ -655,6 +660,18 @@ class OnlineBookStorageTest {
                         }.single()
                         assertEquals(renewed.tracks, artwork.tracks)
                         assertEquals(progressed.progress, artwork.progress)
+
+                        val credits = listOf(ReaderCredit("7", "Reader"))
+                        dao.refreshTrackReaderCredits(original.id, original.providerId, original.providerBookId,
+                            mapOf(requireNotNull(first.providerTrackRef) to null,
+                                requireNotNull(second.providerTrackRef) to ReaderCreditsCodec.encode(credits)))
+                        val credited = emissions.receiveAsFlow().first {
+                            it.single().tracks.last().readerCredits == credits
+                        }.single()
+                        assertEquals(artwork.tracks.first(), credited.tracks.first())
+                        assertEquals(artwork.tracks.last().copy(readerCredits = credits), credited.tracks.last())
+                        assertEquals(progressed.progress, credited.progress)
+
                     } finally {
                         collection.cancelAndJoin()
                         emissions.close()
@@ -678,7 +695,7 @@ class OnlineBookStorageTest {
     private fun openDatabase(name: String): AudioTalesDatabase =
         Room.databaseBuilder<AudioTalesDatabase>(context, name)
             .setDriver(AndroidSQLiteDriver())
-            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6, LibraryMigrations.MIGRATION_6_7)
+            .addMigrations(LibraryMigrations.MIGRATION_1_2, LibraryMigrations.MIGRATION_2_3, LibraryMigrations.MIGRATION_3_4, LibraryMigrations.MIGRATION_4_5, LibraryMigrations.MIGRATION_5_6, LibraryMigrations.MIGRATION_6_7, LibraryMigrations.MIGRATION_7_8)
             .build()
 
     private fun book() = ResolvedOnlineBook(

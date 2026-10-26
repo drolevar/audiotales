@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import io.github.drolevar.audiotales.data.library.ReaderCredit
 import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryTrack
 import io.github.drolevar.audiotales.data.library.ListeningProgress
@@ -137,6 +138,39 @@ class BookPlayerContentTest {
         assertNull(safePlayerSourceUrl("javascript:alert(1)"))
         assertNull(safePlayerSourceUrl("https://user:password@example.com/book"))
         assertEquals("https://example.com/book", safePlayerSourceUrl("https://example.com/book"))
+    }
+
+    @Test fun informationRetainsCompleteReaderSummaryOnMetadataFailureAndKeepsAuthorSeparate() {
+        val credits = listOf(ReaderCredit("7", "First Reader"), ReaderCredit("8", "Second Reader"))
+        compose.setContent { Screen(ready().copy(tracks = tracks.map { it.copy(readerCredits = credits) }, metadataFailed = true)) }
+        openOptions()
+        compose.onNodeWithText("Book information").performClick()
+        compose.onNode(hasText("An author") and hasAnyAncestor(isDialog())).assertIsDisplayed()
+        compose.onNodeWithText("Read by First Reader, Second Reader").assertIsDisplayed()
+    }
+
+    @Test fun mixedReaderCreditsStayOnTheirOwnTracksWithoutABookSummary() {
+        val first = listOf(ReaderCredit("7", "First Reader"))
+        val second = listOf(ReaderCredit("8", "Second Reader"))
+        compose.setContent { Screen(ready().copy(tracks = listOf(
+            tracks.first().copy(readerCredits = first), tracks.last().copy(readerCredits = second)))) }
+        openOptions()
+        compose.onNodeWithText("Book information").performClick()
+        compose.onNodeWithText("Read by", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithContentDescription("Tracks").performScrollTo().performClick()
+        compose.onNodeWithText("Read by First Reader").assertIsDisplayed()
+        compose.onNodeWithText("Read by Second Reader").assertIsDisplayed()
+    }
+
+    @Test fun unknownAndEmptyPlayerCreditsDoNotDisplayAnEmptyLabel() {
+        compose.setContent { Screen(ready().copy(tracks = listOf(tracks.first(), tracks.last().copy(readerCredits = emptyList())))) }
+        openOptions()
+        compose.onNodeWithText("Book information").performClick()
+        compose.onNodeWithText("Read by", substring = true).assertDoesNotExist()
+        compose.onNodeWithContentDescription("Close").performClick()
+        compose.onNodeWithContentDescription("Tracks").performScrollTo().performClick()
+        compose.onNodeWithText("Read by", substring = true).assertDoesNotExist()
     }
 
     @Test

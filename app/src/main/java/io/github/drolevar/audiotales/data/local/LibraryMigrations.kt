@@ -6,6 +6,12 @@ import androidx.sqlite.execSQL
 import java.security.MessageDigest
 
 object LibraryMigrations {
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override suspend fun migrate(connection: SQLiteConnection) {
+            connection.execSQL("ALTER TABLE tracks ADD COLUMN readerCreditsJson TEXT")
+        }
+    }
+
     val MIGRATION_6_7 = object : Migration(6, 7) {
         override suspend fun migrate(connection: SQLiteConnection) {
             connection.execSQL("ALTER TABLE tracks ADD COLUMN sourceStartMs INTEGER NOT NULL DEFAULT 0")

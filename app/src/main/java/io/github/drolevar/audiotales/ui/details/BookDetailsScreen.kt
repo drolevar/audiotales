@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.drolevar.audiotales.data.library.commonReaderCredits
+import io.github.drolevar.audiotales.data.library.readerCreditNames
 import io.github.drolevar.audiotales.R
 import io.github.drolevar.audiotales.playback.DownloadStatus
 import io.github.drolevar.audiotales.playback.PlaybackConnection
@@ -146,6 +148,9 @@ internal fun BookDetailsScreen(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(book.displayTitle, style = MaterialTheme.typography.titleLarge.copy(fontSize = 20.sp, lineHeight = 26.sp))
                         book.author?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        readerCreditNames(commonReaderCredits(state.tracks))?.let { names ->
+                            Text(stringResource(R.string.reader_credit_read_by, names), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         (state.sourceName ?: book.sourceUrl?.let { runCatching { URI(it).host }.getOrNull() })?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         Text(stringResource(if (state.saved) R.string.book_details_saved else R.string.book_details_unsaved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         book.language?.takeIf(String::isNotBlank)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
@@ -232,7 +237,10 @@ internal fun BookDetailsScreen(
                             state.progress?.takeIf { it.trackId == track.id }?.let { stringResource(R.string.book_details_current_position, durationLabel(it.positionMs)) },
                             status?.let { stringResource(when (it) { DownloadStatus.COMPLETED -> R.string.collection_downloaded; DownloadStatus.PAUSED -> R.string.book_details_paused; DownloadStatus.FAILED -> R.string.book_details_download_status_failed; DownloadStatus.REMOVING -> R.string.collection_removing; DownloadStatus.QUEUED -> R.string.book_details_queued; DownloadStatus.DOWNLOADING -> R.string.book_details_downloading }) },
                         )
-                        if (details.isNotEmpty()) Text(details.joinToString(" · "))
+                        Column {
+                            if (details.isNotEmpty()) Text(details.joinToString(" · "))
+                            readerCreditNames(track.readerCredits)?.let { Text(stringResource(R.string.reader_credit_read_by, it)) }
+                        }
                     },
                     leadingContent = { Text((index + 1).toString()) },
                     trailingContent = { Icon(painterResource(R.drawable.ic_play), null) },

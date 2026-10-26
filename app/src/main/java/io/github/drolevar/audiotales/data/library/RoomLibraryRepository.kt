@@ -48,6 +48,7 @@ class RoomLibraryRepository @Inject constructor(
                 streamReferer = track.streamReferer, downloadReferer = track.downloadReferer,
                 sourceStartMs = track.sourceStartMs, sourceEndMs = track.sourceEndMs,
                 audioResourceId = track.audioResourceId,
+                readerCreditsJson = ReaderCreditsCodec.encode(track.readerCredits),
             )
         })
         val stored = requireNotNull(dao.getProviderBook(book.providerId, book.providerBookId))
@@ -85,6 +86,7 @@ private fun TrackEntity.toLibraryTrack() = LibraryTrack(
     providerTrackRef = providerTrackRef,
     streamReferer = streamReferer, downloadReferer = downloadReferer,
     sourceStartMs = sourceStartMs, sourceEndMs = sourceEndMs, audioResourceId = audioResourceId,
+    readerCredits = ReaderCreditsCodec.decode(readerCreditsJson),
 )
 
 private fun BookEntity.toLibraryBook() = LibraryBook(

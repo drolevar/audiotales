@@ -10,6 +10,7 @@ An audiobook player for Android, built for discovering books in online libraries
 - Browse a library separately, rename it, share its address, or remove it from Browse while keeping your saved books and downloads.
 - See book covers in the catalogue, your saved collection and the player.
 - Read book descriptions and inspect the track list before saving. Saved descriptions and track lists remain available offline.
+- See LibriVox reader credits separately from authors, including saved credits offline. Use **Refresh details** to update older saved books.
 - Share a supported book link from your browser to AudioTales to open its details. Opening a link does not save the book or start playback; a new library requires your confirmation.
 - Filter saved books by listening or download state, and sort by recent listening, title or author.
 - Listen with play/pause, seeking, speed and track controls, and resume your saved position.

@@ -30,6 +30,8 @@ data class LibraryTrack(
     val sourceStartMs: Long = 0,
     val sourceEndMs: Long? = null,
     val audioResourceId: String? = null,
+    /** Null means unavailable; an empty list is an explicit absence of credits. */
+    val readerCredits: List<ReaderCredit>? = null,
 ) {
     /** Sections of one recording share one complete audio download and cache key. */
     val downloadId: String get() = audioResourceId ?: id

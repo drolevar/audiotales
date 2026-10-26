@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryTrack
+import io.github.drolevar.audiotales.data.library.ReaderCredit
 import io.github.drolevar.audiotales.ui.theme.AudioTalesTheme
 import java.io.File
 import org.junit.Assert.assertEquals
@@ -73,6 +74,33 @@ class BookDetailsContentTest {
         capture("large-text-audio-error")
         compose.onNodeWithText("A description").performScrollTo().assertIsDisplayed()
         compose.runOnIdle { assertEquals(1, retries) }
+    }
+
+    @Test fun identicalCompleteReaderCreditsHaveABookSummarySeparateFromAuthor() {
+        val credits = listOf(ReaderCredit("7", "First Reader"), ReaderCredit("8", "Second Reader"))
+        compose.setContent { Content(BookDetailsUiState(book = book.copy(author = "The author"),
+            tracks = listOf(track.copy(readerCredits = credits), track.copy(id = "other", sequenceIndex = 1, readerCredits = credits)), loading = false)) }
+        compose.onNodeWithText("The author").assertIsDisplayed()
+        compose.onNodeWithText("Read by First Reader, Second Reader").assertIsDisplayed()
+    }
+
+    @Test fun mixedOrUnknownReadersAppearOnlyOnTheirOwnTracks() {
+        val credits = listOf(ReaderCredit("7", "Known Reader"))
+        compose.setContent { Content(BookDetailsUiState(book = book,
+            tracks = listOf(track, track.copy(id = "other", title = "Other track", sequenceIndex = 1, readerCredits = credits)), loading = false)) }
+        compose.onNodeWithText("Read by Known Reader").assertDoesNotExist()
+        compose.onNodeWithText("Tracks").performScrollTo().performClick()
+        compose.onNodeWithText("Read by Known Reader").assertIsDisplayed()
+        compose.onNodeWithText("First track").assertIsDisplayed()
+        compose.onNodeWithText("Other track").assertIsDisplayed()
+    }
+
+    @Test fun unknownAndExplicitlyEmptyCreditsDoNotExposeAnEmptyReadByLabel() {
+        compose.setContent { Content(BookDetailsUiState(book = book,
+            tracks = listOf(track, track.copy(id = "other", sequenceIndex = 1, readerCredits = emptyList())), loading = false)) }
+        compose.onNodeWithText("Read by", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Tracks").performScrollTo().performClick()
+        compose.onNodeWithText("Read by", substring = true).assertDoesNotExist()
     }
 
     /** Optional inspected evidence; no golden screenshot comparison. */

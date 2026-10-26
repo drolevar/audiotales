@@ -156,6 +156,80 @@ class BookPlayerViewModelTest {
         assertEquals(listOf(track), vm.state.value.tracks)
     }
 
+    @Test fun metadataRefreshPublishesSavedBookAndReaderCreditsTogetherWithoutChangingProgress() = playerTest {
+        val vm = model()
+        val credited = track.copy(readerCredits = listOf(ReaderCredit("7", "Reader")))
+        val updated = book.copy(description = "Updated description")
+        online.metadataRefresh = {
+            library.tracks = listOf(credited)
+            library.updateBook(updated)
+            updated
+        }
+        vm.refreshMetadata(); runCurrent()
+        assertEquals(updated, vm.state.value.book)
+        assertEquals(listOf(credited), vm.state.value.tracks)
+        assertEquals(progress, vm.state.value.progress)
+        assertFalse(vm.state.value.metadataFailed)
+        assertFalse(vm.state.value.metadataRefreshing)
+    }
+
+    @Test fun failedTrackReloadKeepsKnownCreditsAndDescriptionTogether() = playerTest {
+        val credited = track.copy(readerCredits = listOf(ReaderCredit("7", "Known reader")))
+        library.tracks = listOf(credited)
+        val vm = model()
+        library.beforeTracks = { error("read failed") }
+        online.metadataRefresh = { book.copy(description = "New remote description") }
+        vm.refreshMetadata(); runCurrent()
+        assertEquals(book, vm.state.value.book)
+        assertEquals(listOf(credited), vm.state.value.tracks)
+        assertTrue(vm.state.value.metadataFailed)
+        assertFalse(vm.state.value.metadataRefreshing)
+    }
+
+    @Test fun leavingDuringTrackReloadPreservesKnownDataAndClearsMetadataLoading() = playerTest {
+        val vm = model()
+        val gate = CompletableDeferred<Unit>()
+        library.beforeTracks = { gate.await() }
+        online.metadataRefresh = { book.copy(description = "Stale") }
+        vm.refreshMetadata(); runCurrent()
+        assertTrue(vm.state.value.metadataRefreshing)
+        vm.deactivate(); runCurrent()
+        gate.complete(Unit); runCurrent()
+        assertEquals(book, vm.state.value.book)
+        assertEquals(listOf(track), vm.state.value.tracks)
+        assertFalse(vm.state.value.metadataRefreshing)
+        assertFalse(vm.state.value.metadataFailed)
+    }
+
+    @Test fun removalDuringMetadataRefreshCannotPublishDeletedBookOrTracks() = playerTest {
+        val vm = model()
+        online.metadataRefresh = {
+            library.deleteBook(book.id)
+            book.copy(description = "Stale result")
+        }
+        vm.refreshMetadata(); runCurrent()
+        assertNull(library.getBook(book.id))
+        assertEquals(book, vm.state.value.book)
+        assertEquals(listOf(track), vm.state.value.tracks)
+        assertFalse(vm.state.value.metadataRefreshing)
+    }
+
+    @Test fun loadingSameBookAgainPreventsOldMetadataGenerationFromPublishing() = playerTest {
+        val vm = model()
+        val gate = CompletableDeferred<Unit>()
+        online.metadataRefresh = {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable) { gate.await() }
+            book.copy(description = "Stale result")
+        }
+        vm.refreshMetadata(); runCurrent()
+        vm.load(book.id); runCurrent()
+        gate.complete(Unit); runCurrent()
+        assertEquals(book, vm.state.value.book)
+        assertEquals(listOf(track), vm.state.value.tracks)
+        assertFalse(vm.state.value.metadataRefreshing)
+        assertFalse(vm.state.value.metadataFailed)
+    }
+
     private class FakeDownloads(private val events: MutableList<String>) : PlayerDownloads {
         override val state = MutableStateFlow<Map<String, TrackDownloadState>>(emptyMap())
         var initializeBlock: suspend () -> Unit = {}
@@ -186,10 +260,16 @@ class BookPlayerViewModelTest {
 
     private class FakeLibrary(private val events: MutableList<String>) : LibraryRepository {
         private val books = MutableStateFlow(listOf(book))
+        var tracks = listOf(track)
+        var beforeTracks: suspend () -> Unit = {}
+        fun updateBook(value: LibraryBook) { books.value = books.value.map { if (it.id == value.id) value else it } }
         override fun observeBooks() = books
-        override fun observeCollection() = books.map { values -> values.map { LibraryCollectionEntry(it, listOf(track), progress) } }
+        override fun observeCollection() = books.map { values -> values.map { LibraryCollectionEntry(it, tracks, progress) } }
         override suspend fun getBook(bookId: String) = books.value.firstOrNull { it.id == bookId }
-        override suspend fun getTracks(bookId: String) = if (getBook(bookId) != null) listOf(track) else emptyList()
+        override suspend fun getTracks(bookId: String): List<LibraryTrack> {
+            beforeTracks()
+            return if (getBook(bookId) != null) tracks else emptyList()
+        }
         override suspend fun getTrack(trackId: String) = getTracks(book.id).firstOrNull { it.id == trackId }
         override suspend fun getProgress(bookId: String) = if (getBook(bookId) != null) progress else null
         override suspend fun saveProgress(bookId: String, trackId: String, positionMs: Long) = Unit

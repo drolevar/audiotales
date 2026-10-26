@@ -91,16 +91,27 @@ class OnlineBookDetailsSourceTest {
         assertEquals(0, fixture.updates)
     }
 
-    @Test fun metadataRefreshMakesOneNarrowRequestEvenForRemovedLibrary() = runTest {
+    @Test fun metadataRefreshMakesOneExtendedRequestEvenForRemovedLibrary() = runTest {
         val fixture = Fixture(fullBook)
         val original = fixture.book
         val updated = fixture.source.refreshBookMetadata(original.id)
         assertEquals(original.copy(description = "A & B", language = "English", coverUrl = "https://archive.org/cover.jpg", coverReferer = null), updated)
         assertEquals(1, fixture.requests.size)
-        assertNull(fixture.requests.single().queryParameter("extended"))
+        assertEquals("1", fixture.requests.single().queryParameter("extended"))
+        assertEquals(mapOf("201" to null), fixture.readerAssignments)
         assertEquals(1, fixture.updates)
         assertEquals("org", fixture.source.getLibrary("org").id)
         assertEquals(false, fixture.source.getLibrary("org").isSelected)
+    }
+
+    @Test fun metadataRefreshExtractsReadersWithoutValidatingUnavailableAudioAndKeepsOneRequest() = runTest {
+        val fixture = Fixture(fullBook.replace("\"listen_url\":\"https://archive.org/chapter.mp3\"",
+            "\"listen_url\":\"file:///unavailable.mp3\",\"readers\":[{\"reader_id\":\"7\",\"display_name\":\"Reader\"}]"))
+        val updated = fixture.source.refreshBookMetadata(fixture.book.id)
+        assertEquals("A & B", updated?.description)
+        assertEquals("1", fixture.requests.single().queryParameter("extended"))
+        assertEquals("[{\"providerReaderId\":\"7\",\"displayName\":\"Reader\"}]", fixture.readerAssignments?.get("201"))
+        assertEquals(1, fixture.updates)
     }
 
     @Test fun missingMetadataCannotEraseSavedDetailsOrCover() = runTest {
@@ -136,6 +147,7 @@ class OnlineBookDetailsSourceTest {
             "Saved description", "French")
         var bookReads = 0
         var updates = 0
+        var readerAssignments: Map<String, String?>? = null
         val requests = mutableListOf<HttpUrl>()
         private val repository = Proxy.newProxyInstance(LibraryRepository::class.java.classLoader,
             arrayOf(LibraryRepository::class.java)) { _, method, args ->
@@ -150,6 +162,12 @@ class OnlineBookDetailsSourceTest {
                 "getOnlineLibrary" -> if (args[0] != "org") null else OnlineLibraryEntity("org",
                     if (partner) "https://provider.example/" else "https://librivox.org/", "Library",
                     if (partner) "PARTNER" else "LIBRIVOX", isRegistered = false, isSelected = false)
+                "refreshTrackReaderCredits" -> {
+                    require(args[0] == book.id && args[1] == book.providerId && args[2] == book.providerBookId)
+                    @Suppress("UNCHECKED_CAST")
+                    readerAssignments = args[3] as Map<String, String?>
+                    true
+                }
                 "updateBookMetadata" -> {
                     require(args[0] == book.id && args[1] == book.providerId && args[2] == book.providerBookId)
                     val cover = args[5] as String?

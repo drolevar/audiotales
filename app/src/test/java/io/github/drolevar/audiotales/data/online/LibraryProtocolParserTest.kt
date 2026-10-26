@@ -1,5 +1,6 @@
 package io.github.drolevar.audiotales.data.online
 
+import io.github.drolevar.audiotales.data.library.ReaderCredit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -252,6 +253,61 @@ class LibraryProtocolParserTest {
         val resolved = LibraryProtocolParser.librivoxResolution(org, "42", json)
         assertEquals("A & B", resolved.description)
         assertEquals("English", resolved.language)
+    }
+
+    @Test fun librivoxReadersAreOptionalPerSectionAndNeverInferredFromAuthors() {
+        val fields = listOf("", ",\"readers\":null", ",\"readers\":[]",
+            ",\"readers\":[{\"reader_id\":\"7\",\"display_name\":\"Reader\"}]")
+        val result = readerBook(fields)
+        assertEquals(listOf(null, null, emptyList<ReaderCredit>(), listOf(ReaderCredit("7", "Reader"))),
+            result.tracks.map { it.readerCredits })
+        assertEquals("An Author", result.author)
+    }
+
+    @Test fun librivoxMultipleReadersArePlainTextAndExactlyDeduplicated() {
+        val result = readerBook(listOf(",\"readers\":[{\"reader_id\":\"7\",\"display_name\":\" <b>A &amp; B</b> \"}," +
+            "{\"reader_id\":\"8\",\"display_name\":\"Second\"},{\"reader_id\":\"7\",\"display_name\":\"A &amp; B\"}]"))
+        assertEquals(listOf(ReaderCredit("7", "A & B"), ReaderCredit("8", "Second")), result.tracks.single().readerCredits)
+    }
+
+    @Test fun malformedOptionalReadersCannotHideOtherwiseValidAudio() {
+        val invalid = listOf("{}", "[null]", "[{}]", "[false]", "[\"Reader\"]",
+            "[{\"reader_id\":7,\"display_name\":\"Reader\"}]",
+            "[{\"reader_id\":\"7\",\"display_name\":false}]",
+            "[{\"reader_id\":\"7\",\"display_name\":\"<b></b>\"}]",
+            "[{\"reader_id\":\"7\",\"display_name\":\"${"x".repeat(201)}\"}]",
+            "[" + List(33) { "{\"reader_id\":\"7\",\"display_name\":\"Reader\"}" }.joinToString(",") + "]",
+            "[{\"reader_id\":\"7\",\"display_name\":\"Valid\"},{}]")
+        invalid.forEach { credits ->
+            assertNull(credits, readerBook(listOf(",\"readers\":$credits")).tracks.single().readerCredits)
+        }
+    }
+
+    @Test fun readerAssignmentsRequireCompleteStableSectionSetButDoNotValidateAudio() {
+        val text = readerJson(listOf(",\"readers\":[{\"reader_id\":\"7\",\"display_name\":\"Reader\"}]", ",\"readers\":[]"))
+            .replace("https://archive.org/1.mp3", "file:///unavailable.mp3")
+        val assignments = LibraryProtocolParser.librivoxReaderAssignments("42", text)
+        assertEquals(mapOf("1" to listOf(ReaderCredit("7", "Reader")), "2" to emptyList<ReaderCredit>()), assignments)
+        assertThrows(OnlineBookException::class.java) { LibraryProtocolParser.librivoxResolution(org, "42", text) }
+        assertNull(LibraryProtocolParser.librivoxReaderAssignments("42", text.replace("\"num_sections\":\"2\"", "\"num_sections\":\"3\"")))
+        assertNull(LibraryProtocolParser.librivoxReaderAssignments("42", text.replace("\"id\":\"2\"", "\"id\":\"1\"")))
+        assertNull(LibraryProtocolParser.librivoxReaderAssignments("42", """{"books":[{"id":"42","title":"Book"}]}"""))
+    }
+
+    @Test fun partnerMetadataAndPlaylistsDoNotInventReadersFromUnverifiedFields() {
+        val book = LibraryProtocolParser.partnerBook(source, LibraryProtocolParser.objectValue(metadata))
+        val result = LibraryProtocolParser.partnerResolution(source, book,
+            """[{"title":"One","file":"https://cdn.example/track.mp3","author":"Someone","readers":[{"reader_id":"7","display_name":"Unverified"}]}]""")
+        assertNull(result.tracks.single().readerCredits)
+    }
+
+    private val org = OnlineLibrary("org", "https://librivox.org/", "LibriVox", LibraryProtocol.LIBRIVOX)
+    private fun readerBook(fields: List<String>) = LibraryProtocolParser.librivoxResolution(org, "42", readerJson(fields))
+    private fun readerJson(fields: List<String>): String {
+        val sections = fields.mapIndexed { index, field ->
+            """{"id":"${index + 1}","section_number":"$index","title":"Section $index","listen_url":"https://archive.org/${index + 1}.mp3"$field}"""
+        }.joinToString(",")
+        return """{"books":[{"id":"42","title":"Book","url_librivox":"https://librivox.org/book/","authors":[{"first_name":"An","last_name":"Author"}],"num_sections":"${fields.size}","sections":[$sections]}]}"""
     }
 
     @Test fun descriptionDistinguishesMissingNullAndExplicitlyEmptyFields() {

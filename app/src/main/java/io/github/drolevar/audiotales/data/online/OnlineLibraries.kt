@@ -4,6 +4,7 @@ import io.github.drolevar.audiotales.BuildConfig
 import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryAddition
 import io.github.drolevar.audiotales.data.library.LibraryRepository
+import io.github.drolevar.audiotales.data.library.ReaderCreditsCodec
 import io.github.drolevar.audiotales.data.library.ResolvedOnlineBook
 import io.github.drolevar.audiotales.data.library.validArtworkUrl
 import io.github.drolevar.audiotales.data.library.bookDisplayTitle
@@ -154,17 +155,31 @@ internal class OnlineLibraries internal constructor(
         library.getBook(bookId)
     }
 
-    /** A single metadata response updates optional details without inspecting or replacing tracks. */
+    /** One metadata response updates optional details and credits without renewing audio transport. */
     override suspend fun refreshBookMetadata(bookId: String): LibraryBook? = withContext(Dispatchers.IO) {
         val book = library.getBook(bookId) ?: return@withContext null
         val providerId = book.providerId ?: return@withContext book
         val remoteId = book.providerBookId ?: return@withContext book
         LibraryProtocolParser.requireId(remoteId)
-        val details = metadata(getLibrary(providerId), remoteId)
+        val source = getLibrary(providerId)
+        val (details, readerAssignments) = when (source.protocol) {
+            LibraryProtocol.PARTNER -> metadata(source, remoteId) to null
+            LibraryProtocol.LIBRIVOX -> {
+                val text = http.get(librivoxUrl(source).addQueryParameter("id", remoteId)
+                    .addQueryParameter("extended", "1").build(), 3_145_728)
+                LibraryProtocolParser.librivoxMetadata(source, remoteId, text) to
+                    LibraryProtocolParser.librivoxReaderAssignments(remoteId, text)
+            }
+        }
         if (details.libraryId != providerId || details.remoteId != remoteId) unexpectedProtocol()
         val cover = validArtworkUrl(details.coverUrl)
         if (dao.updateBookMetadata(bookId, providerId, remoteId, details.description, details.language,
                 cover, cover?.let { validArtworkUrl(details.coverReferer) }) != 1) unexpectedProtocol()
+        readerAssignments?.let { assignments ->
+            // A section-set mismatch preserves all saved attribution; book metadata is still valid.
+            dao.refreshTrackReaderCredits(bookId, providerId, remoteId,
+                assignments.mapValues { (_, credits) -> ReaderCreditsCodec.encode(credits) })
+        }
         library.getBook(bookId)
     }
 
