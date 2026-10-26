@@ -43,6 +43,8 @@ interface LibraryRepository {
     suspend fun getProgress(bookId: String): ListeningProgress?
     suspend fun saveProgress(bookId: String, trackId: String, positionMs: Long)
     suspend fun addOnlineBook(book: ResolvedOnlineBook): LibraryAddition
+    /** Delete the saved book and its listening data after playback/downloads have been stopped. */
+    suspend fun deleteBook(bookId: String)
 }
 
 data class LibraryCollectionEntry(

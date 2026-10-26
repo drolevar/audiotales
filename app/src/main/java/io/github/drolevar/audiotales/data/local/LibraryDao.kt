@@ -54,6 +54,11 @@ interface LibraryDao {
     @Query("SELECT * FROM books WHERE id = :bookId")
     suspend fun getBook(bookId: String): BookEntity?
 
+    /** Existing foreign keys cascade through tracks to progress and bookmarks atomically. */
+    @Transaction
+    @Query("DELETE FROM books WHERE id = :bookId")
+    suspend fun deleteBook(bookId: String)
+
     @Query("SELECT * FROM books WHERE providerId = :providerId AND providerBookId = :providerBookId")
     suspend fun getProviderBook(providerId: String, providerBookId: String): BookEntity?
 

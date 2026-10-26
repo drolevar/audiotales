@@ -103,6 +103,7 @@ class PlaybackItemResolverTest {
         }
         override suspend fun getProgress(bookId: String): ListeningProgress? = progress
         override suspend fun saveProgress(bookId: String, trackId: String, positionMs: Long) = Unit
+        override suspend fun deleteBook(bookId: String): Unit = error("Unexpected book deletion")
         override suspend fun addOnlineBook(book: ResolvedOnlineBook): LibraryAddition =
             error("Not used by playback resolution")
     }

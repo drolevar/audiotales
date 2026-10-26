@@ -183,6 +183,7 @@ class DownloadsViewModelTest {
         override suspend fun getProgress(bookId: String) = entries.value.firstOrNull { it.book.id == bookId }?.progress
         override suspend fun getTrack(trackId: String) = entries.value.flatMap { it.tracks }.firstOrNull { it.id == trackId }
         override suspend fun saveProgress(bookId: String, trackId: String, positionMs: Long) = Unit
+        override suspend fun deleteBook(bookId: String): Unit = error("Unexpected book deletion")
         override suspend fun addOnlineBook(book: ResolvedOnlineBook): LibraryAddition = error("unused")
     }
 

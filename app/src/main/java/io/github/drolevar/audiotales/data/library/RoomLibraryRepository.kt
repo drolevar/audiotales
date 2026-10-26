@@ -30,6 +30,8 @@ class RoomLibraryRepository @Inject constructor(
 
     override suspend fun getBook(bookId: String): LibraryBook? = dao.getBook(bookId)?.toLibraryBook()
 
+    override suspend fun deleteBook(bookId: String) = dao.deleteBook(bookId)
+
     override suspend fun addOnlineBook(book: ResolvedOnlineBook): LibraryAddition {
         val cover = validArtworkUrl(book.coverUrl)
         val entity = BookEntity(

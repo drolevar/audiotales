@@ -19,7 +19,7 @@ internal class PlaybackProgressRecorder(
     private val library: LibraryRepository,
     private val onSaveFailed: (Boolean) -> Unit,
 ) : Player.Listener {
-    private data class Position(val trackId: String, val positionMs: Long, val completion: CompletableDeferred<Unit>? = null)
+    private data class Position(val trackId: String?, val positionMs: Long, val completion: CompletableDeferred<Unit>? = null)
     private val positions = Channel<Position>(64)
     private var ticker: Job? = null
     private lateinit var writer: Job
@@ -65,6 +65,13 @@ internal class PlaybackProgressRecorder(
         completion.await()
     }
 
+    /** FIFO barrier after clearing a queue, including outgoing discontinuity snapshots. */
+    suspend fun drain() {
+        val completion = CompletableDeferred<Unit>()
+        positions.send(Position(null, 0, completion))
+        completion.await()
+    }
+
     fun stop(): Job {
         recordCurrent()
         ticker?.cancel()
@@ -79,8 +86,9 @@ internal class PlaybackProgressRecorder(
     }
 
     private suspend fun persist(position: Position) {
+        val trackId = position.trackId ?: return
         try {
-            val track = library.getTrack(position.trackId) ?: return
+            val track = library.getTrack(trackId) ?: return
             library.saveProgress(track.bookId, track.id, position.positionMs)
             onSaveFailed(false)
         } catch (cancelled: CancellationException) {

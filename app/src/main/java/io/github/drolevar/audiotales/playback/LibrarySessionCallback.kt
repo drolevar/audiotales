@@ -10,6 +10,8 @@ import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.MediaLibraryService.MediaLibrarySession
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionError
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
@@ -21,6 +23,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
 
+internal val prepareBookRemovalCommand = SessionCommand("io.github.drolevar.audiotales.PREPARE_BOOK_REMOVAL", Bundle.EMPTY)
+internal const val BOOK_REMOVAL_TOKEN = "bookRemovalToken"
+
 @androidx.annotation.OptIn(UnstableApi::class)
 internal class LibrarySessionCallback(
     private val library: LibraryRepository,
@@ -28,6 +33,10 @@ internal class LibrarySessionCallback(
     rootTitle: String,
     private val storage: MediaStorage,
     private val progress: PlaybackProgressRecorder,
+    private val sleepTimer: SleepTimerController,
+    private val appPackageName: String,
+    private val appUid: Int,
+    private val bookRemovalGuard: BookRemovalGuard,
 ) : MediaLibrarySession.Callback {
     private val resolver = PlaybackItemResolver(library)
     private val root = MediaItem.Builder()
@@ -49,11 +58,71 @@ internal class LibrarySessionCallback(
         controller: MediaSession.ControllerInfo,
     ): ListenableFuture<MediaSession.ConnectionResult> = Futures.immediateFuture(
         if (controller.isTrusted) {
-            MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller).build()
+            MediaSession.ConnectionResult.AcceptedResultBuilder(session, controller).apply {
+                if (isAppController(controller)) {
+                    setAvailableSessionCommands(
+                        MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                            .add(SleepTimerCommands.SET_DURATION)
+                            .add(SleepTimerCommands.END_OF_TRACK)
+                            .add(SleepTimerCommands.CANCEL)
+                            .add(prepareBookRemovalCommand)
+                            .build(),
+                    )
+                }
+            }.build()
         } else {
             MediaSession.ConnectionResult.reject()
         },
     )
+
+    override fun onCustomCommand(
+        session: MediaSession,
+        controller: MediaSession.ControllerInfo,
+        customCommand: SessionCommand,
+        args: Bundle,
+    ): ListenableFuture<SessionResult> {
+        if (!isAppController(controller)) return commandResult(SessionError.ERROR_PERMISSION_DENIED)
+        val bookId = args.getString(SleepTimerCommands.BOOK_ID)?.takeIf(String::isNotBlank)
+            ?: return commandResult(SessionError.ERROR_BAD_VALUE)
+        if (customCommand == prepareBookRemovalCommand) return scope.future {
+            val token = args.getString(BOOK_REMOVAL_TOKEN)
+            if (!bookRemovalGuard.owns(bookId, token)) return@future SessionResult(SessionError.ERROR_INVALID_STATE)
+            try {
+                if (session.player.currentMediaItem?.mediaMetadata?.extras?.getString("bookId") == bookId) {
+                    session.player.pause()
+                    progress.flushCurrent()
+                }
+                if (!bookRemovalGuard.owns(bookId, token)) return@future SessionResult(SessionError.ERROR_INVALID_STATE)
+                // Also remove this book from a mixed queue without stopping another active book.
+                val queuedIndices = (0 until session.player.mediaItemCount).filter {
+                    session.player.getMediaItemAt(it).mediaMetadata.extras?.getString("bookId") == bookId
+                }
+                if (queuedIndices.size == session.player.mediaItemCount) session.player.clearMediaItems()
+                else queuedIndices.asReversed().forEach(session.player::removeMediaItem)
+                progress.drain()
+                if (!bookRemovalGuard.owns(bookId, token)) return@future SessionResult(SessionError.ERROR_INVALID_STATE)
+                SessionResult(SessionResult.RESULT_SUCCESS)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                SessionResult(SessionError.ERROR_IO)
+            }
+        }
+        if (bookRemovalGuard.isReserved(bookId)) return commandResult(SessionError.ERROR_INVALID_STATE)
+        val accepted = when (customCommand) {
+            SleepTimerCommands.SET_DURATION -> sleepTimer.setDuration(bookId, args.getLong(SleepTimerCommands.DURATION_MS))
+            SleepTimerCommands.END_OF_TRACK -> sleepTimer.setEndOfTrack(bookId)
+            SleepTimerCommands.CANCEL -> sleepTimer.cancel(bookId)
+            else -> return commandResult(SessionError.ERROR_NOT_SUPPORTED)
+        }
+        return commandResult(if (accepted) SessionResult.RESULT_SUCCESS else SessionError.ERROR_BAD_VALUE)
+    }
+
+    private fun isAppController(controller: MediaSession.ControllerInfo): Boolean =
+        controller.isTrusted && controller.uid == appUid && controller.packageName == appPackageName
+
+    private fun commandResult(code: Int): ListenableFuture<SessionResult> =
+        Futures.immediateFuture(SessionResult(code))
 
     // Root discovery must be immediate for platform/legacy browsers, including Android Auto.
     override fun onGetLibraryRoot(
@@ -119,13 +188,16 @@ internal class LibrarySessionCallback(
         controller: MediaSession.ControllerInfo,
         mediaItems: List<MediaItem>,
     ): ListenableFuture<List<MediaItem>> = scope.future {
+        rejectPendingRemovalRequests(mediaItems)
         val requests = mediaItems.map { item ->
             PlaybackRequest(
                 mediaId = item.mediaId,
                 hasExternalLocation = item.localConfiguration != null || item.requestMetadata.mediaUri != null,
             )
         }
-        resolver.resolve(requests).map { it.toMediaItem(includeLocation = true) }
+        val resolved = resolver.resolve(requests).map { it.toMediaItem(includeLocation = true) }
+        rejectPendingRemovalItems(resolved)
+        resolved
     }
 
     override fun onSetMediaItems(
@@ -136,9 +208,10 @@ internal class LibrarySessionCallback(
         startPositionMs: Long,
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
         require(mediaItems.none { it.localConfiguration != null || it.requestMetadata.mediaUri != null })
+        rejectPendingRemovalRequests(mediaItems)
         progress.flushCurrent()
         val bookId = mediaItems.singleOrNull()?.mediaId?.let(LibraryMediaIds::bookId)
-        if (bookId != null) {
+        val result = if (bookId != null) {
             val queue = resolver.resolveBook(bookId)
             MediaSession.MediaItemsWithStartPosition(
                 queue.tracks.map { it.toMediaItem(includeLocation = true) },
@@ -159,6 +232,22 @@ internal class LibrarySessionCallback(
                     tracks.map { it.toMediaItem(includeLocation = true) }, startIndex, startPositionMs,
                 )
             }
+        }
+        rejectPendingRemovalItems(result.mediaItems)
+        result
+    }
+
+    private suspend fun rejectPendingRemovalRequests(items: List<MediaItem>) {
+        items.forEach { item ->
+            val bookId = LibraryMediaIds.bookId(item.mediaId)
+                ?: LibraryMediaIds.trackId(item.mediaId)?.let { library.getTrack(it)?.bookId }
+            require(!bookRemovalGuard.isReserved(bookId)) { "Book removal is in progress" }
+        }
+    }
+
+    private fun rejectPendingRemovalItems(items: List<MediaItem>) {
+        require(items.none { bookRemovalGuard.isReserved(it.mediaMetadata.extras?.getString("bookId")) }) {
+            "Book removal is in progress"
         }
     }
 

@@ -123,6 +123,7 @@ class OnlineArtworkRefreshTest {
             override suspend fun getTrack(trackId: String): LibraryTrack? = error("Artwork must not read tracks")
             override suspend fun getProgress(bookId: String): ListeningProgress? = error("Artwork must not read progress")
             override suspend fun saveProgress(bookId: String, trackId: String, positionMs: Long): Unit = error("Artwork must not save progress")
+            override suspend fun deleteBook(bookId: String): Unit = error("Unexpected book deletion")
             override suspend fun addOnlineBook(book: ResolvedOnlineBook): LibraryAddition = error("Artwork must not re-save books")
         }
         private val dao = Proxy.newProxyInstance(LibraryDao::class.java.classLoader, arrayOf(LibraryDao::class.java)) { _, method, args ->

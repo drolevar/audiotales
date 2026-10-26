@@ -3,6 +3,7 @@ package io.github.drolevar.audiotales.playback
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
+import android.os.Process
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
@@ -30,10 +31,12 @@ import kotlinx.coroutines.withTimeoutOrNull
 class PlaybackService : MediaLibraryService() {
     @Inject lateinit var library: LibraryRepository
     @Inject lateinit var storage: MediaStorage
+    @Inject lateinit var bookRemovalGuard: BookRemovalGuard
 
     private val libraryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var librarySession: MediaLibrarySession? = null
     private lateinit var progress: PlaybackProgressRecorder
+    private lateinit var sleepTimer: SleepTimerController
     private var libraryObserver: Job? = null
 
     override fun onCreate() {
@@ -54,9 +57,13 @@ class PlaybackService : MediaLibraryService() {
             .build()
 
         progress = PlaybackProgressRecorder(player, library) { failed ->
-            librarySession?.setSessionExtras(Bundle().apply { putBoolean("progressSaveFailed", failed) })
+            updateSessionExtras { putBoolean("progressSaveFailed", failed) }
         }
         progress.start(libraryScope)
+        sleepTimer = SleepTimerController(player, onStateChanged = { state ->
+            updateSessionExtras { SleepTimerCommands.writeState(this, state) }
+        })
+        sleepTimer.start(libraryScope)
 
         val openApp = PendingIntent.getActivity(
             this,
@@ -67,7 +74,10 @@ class PlaybackService : MediaLibraryService() {
         librarySession = MediaLibrarySession.Builder(
             this,
             player,
-            LibrarySessionCallback(library, libraryScope, getString(R.string.media_library_title), storage, progress),
+            LibrarySessionCallback(
+                library, libraryScope, getString(R.string.media_library_title), storage, progress,
+                sleepTimer, packageName, Process.myUid(), bookRemovalGuard,
+            ),
         )
             .setSessionActivity(openApp)
             .build()
@@ -84,6 +94,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         libraryObserver?.cancel()
+        sleepTimer.stop()
         val writer = progress.stop()
         librarySession?.let { session ->
             val player = session.player
@@ -101,5 +112,10 @@ class PlaybackService : MediaLibraryService() {
     override fun onTaskRemoved(rootIntent: Intent?) {
         progress.recordCurrent()
         super.onTaskRemoved(rootIntent)
+    }
+
+    private fun updateSessionExtras(update: Bundle.() -> Unit) {
+        val session = librarySession ?: return
+        session.setSessionExtras(Bundle(session.sessionExtras).apply(update))
     }
 }
