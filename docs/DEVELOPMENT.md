@@ -451,7 +451,17 @@ Actual signed candidates passed certificate, package/version, non-debuggable,
 ZIP alignment and ELF load-segment checks for all eight native libraries; a wrong
 signer was rejected. These were local validation builds with a test version
 input, not a pushed release tag or a GitHub-produced release artifact. A real
-tag-triggered run and minified runtime acceptance remain separate evidence.
+tag-triggered run remains separate evidence.
+
+The first minified cold launch exposed a startup failure in WorkManager 2.8.1's
+transitive Room 2.5 database: R8 removed `WorkDatabase_Impl`'s reflected public
+no-argument constructor. A rule preserves only that constructor; dependencies,
+normal startup and existing WorkManager jobs remain intact. After rebuilding,
+the actual signed/minified candidate cold-launched on API 26 and API 37.2,
+registered the sample partner library, resolved its book information and track,
+and started and paused a short stream through the app's shared service. This is
+headless runtime evidence for the sampled paths, with no physical-audio or Auto
+claim. Packaging checks alone did not detect the original failure.
 
 ## Primary references
 
