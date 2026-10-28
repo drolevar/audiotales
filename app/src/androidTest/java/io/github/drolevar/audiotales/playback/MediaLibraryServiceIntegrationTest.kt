@@ -7,6 +7,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Looper
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -14,6 +15,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaBrowser
 import androidx.media3.session.MediaController
+import androidx.media3.session.MediaLibraryService.LibraryParams
 import androidx.media3.session.SessionError
 import androidx.media3.session.SessionToken
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -23,7 +25,8 @@ import io.github.drolevar.audiotales.data.local.AudioTalesDatabase
 import io.github.drolevar.audiotales.data.local.BookEntity
 import io.github.drolevar.audiotales.data.local.PlaybackProgressEntity
 import io.github.drolevar.audiotales.data.local.TrackEntity
-import io.github.drolevar.audiotales.di.StorageModule
+import dagger.hilt.android.EntryPointAccessors
+import io.github.drolevar.audiotales.R
 import java.util.UUID
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -53,13 +56,39 @@ class MediaLibraryServiceIntegrationTest {
     fun realServiceBrowsesStableBookAndTrackIdsAndRejectsUnknownItems() = runBlocking {
         withFixture { fixture ->
             val browser = fixture.connect()
-            val root = value(onMain { browser.getLibraryRoot(null) }.boundedAwait())
+            val rootParams = LibraryParams.Builder().setOffline(true).setRecent(true).setSuggested(true)
+                .setExtras(Bundle().apply { putString("qualification", fixture.id) }).build()
+            val rootResult = onMain { browser.getLibraryRoot(rootParams) }.boundedAwait()
+            val root = value(rootResult)
             assertEquals("audiotales:library", root.mediaId)
             assertEquals(true, root.mediaMetadata.isBrowsable)
             assertEquals(false, root.mediaMetadata.isPlayable)
+            val returnedParams = requireNotNull(rootResult.params)
+            assertTrue(returnedParams.extras.getBoolean("android.media.browse.SEARCH_SUPPORTED"))
+            assertEquals(fixture.id, returnedParams.extras.getString("qualification"))
+            assertTrue(returnedParams.isOffline)
+            assertTrue(returnedParams.isRecent)
+            assertTrue(returnedParams.isSuggested)
+            assertFalse("Root extras must not mutate the caller's parameters",
+                rootParams.extras.containsKey("android.media.browse.SEARCH_SUPPORTED"))
 
-            val books = value(onMain {
+            val folders = value(onMain {
                 browser.getChildren(root.mediaId, 0, Int.MAX_VALUE, null)
+            }.boundedAwait())
+            val myBooks = folders.single()
+            assertEquals("audiotales:my-books", myBooks.mediaId)
+            assertEquals(fixture.context.getString(R.string.my_books), myBooks.mediaMetadata.title.toString())
+            assertEquals(true, myBooks.mediaMetadata.isBrowsable)
+            assertEquals(false, myBooks.mediaMetadata.isPlayable)
+            assertEquals(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS, myBooks.mediaMetadata.mediaType)
+            assertNull(myBooks.localConfiguration)
+            assertNull(myBooks.requestMetadata.mediaUri)
+            assertEquals(myBooks, value(onMain { browser.getItem(myBooks.mediaId) }.boundedAwait()))
+            assertEquals(LibraryResult.RESULT_SUCCESS,
+                onMain { browser.subscribe(myBooks.mediaId, null) }.boundedAwait().resultCode)
+            assertTrue(value(onMain { browser.getChildren(root.mediaId, 1, 1, null) }.boundedAwait()).isEmpty())
+            val books = value(onMain {
+                browser.getChildren(myBooks.mediaId, 0, Int.MAX_VALUE, null)
             }.boundedAwait())
             val book = books.single { it.mediaId == fixture.bookMediaId }
             assertEquals(fixture.book.title, book.mediaMetadata.title.toString())
@@ -98,6 +127,70 @@ class MediaLibraryServiceIntegrationTest {
             }.boundedAwait()
             assertEquals(SessionError.ERROR_BAD_VALUE, missingChildren.resultCode)
             assertNull(missingChildren.value)
+            onMain {
+                assertEquals(0, browser.mediaItemCount)
+                assertEquals(Player.STATE_IDLE, browser.playbackState)
+                assertFalse(browser.playWhenReady)
+            }
+        }
+    }
+
+    @Test
+    fun savedCollectionChangesNotifyMyBooksAndKeepRootAsOneFolder() = runBlocking {
+        withFixture { fixture ->
+            val changes = mutableListOf<Pair<String, Int>>()
+            val browser = fixture.connect(object : MediaBrowser.Listener {
+                override fun onChildrenChanged(browser: MediaBrowser, parentId: String, itemCount: Int, params: LibraryParams?) {
+                    changes.add(parentId to itemCount)
+                }
+            })
+            for (parentId in listOf(LibraryMediaIds.ROOT, LibraryMediaIds.MY_BOOKS)) {
+                assertEquals(LibraryResult.RESULT_SUCCESS,
+                    onMain { browser.subscribe(parentId, null) }.boundedAwait().resultCode)
+            }
+            val previousBooks = value(onMain {
+                browser.getChildren(LibraryMediaIds.MY_BOOKS, 0, Int.MAX_VALUE, null)
+            }.boundedAwait())
+            onMain { changes.clear() }
+            val added = fixture.book.copy(id = "${fixture.id}-added")
+            try {
+                fixture.database.libraryDao().insertBookWithTracks(added, emptyList())
+                awaitCondition("Saved collection changes did not notify My books with the actual count") {
+                    onMain { changes.contains(LibraryMediaIds.MY_BOOKS to previousBooks.size + 1) }
+                }
+                val folders = value(onMain {
+                    browser.getChildren(LibraryMediaIds.ROOT, 0, Int.MAX_VALUE, null)
+                }.boundedAwait())
+                assertEquals(listOf(LibraryMediaIds.MY_BOOKS), folders.map { it.mediaId })
+                onMain { assertTrue(changes.none { it.first == LibraryMediaIds.ROOT && it.second != 1 }) }
+            } finally {
+                withContext(NonCancellable) { fixture.database.libraryDao().deleteBook(added.id) }
+            }
+        }
+    }
+
+    @Test
+    fun blankOnlineSearchCompletesWithoutChangingTheSavedQueue() = runBlocking {
+        withFixture { fixture ->
+            val changes = mutableListOf<Pair<String, Int>>()
+            val browser = fixture.connect(object : MediaBrowser.Listener {
+                override fun onSearchResultChanged(browser: MediaBrowser, query: String, itemCount: Int, params: LibraryParams?) {
+                    changes.add(query to itemCount)
+                }
+            })
+            val observer = fixture.connect()
+            fixture.selectBook(browser, observer)
+            val query = "  \t "
+            assertEquals(LibraryResult.RESULT_SUCCESS,
+                onMain { browser.search(query, null) }.boundedAwait().resultCode)
+            awaitCondition("Blank search did not complete") { onMain { changes.contains(query to 0) } }
+            assertTrue(value(onMain { browser.getSearchResult(query, 0, 10, null) }.boundedAwait()).isEmpty())
+            onMain {
+                fixture.assertCanonical(observer)
+                assertEquals(4_500L, observer.currentPosition)
+                assertEquals(Player.STATE_IDLE, observer.playbackState)
+                assertFalse(observer.playWhenReady)
+            }
         }
     }
 
@@ -194,7 +287,9 @@ class MediaLibraryServiceIntegrationTest {
             "This suite is restricted to the task-owned emulator; do not run on a physical device"
         }
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val database = withContext(Dispatchers.IO) { StorageModule.provideDatabase(context) }
+        val database = EntryPointAccessors.fromApplication(
+            context.applicationContext, PlaybackTestDependencies::class.java,
+        ).database()
         val fixture = Fixture(context, database)
         val dao = database.libraryDao()
         try {
@@ -218,14 +313,14 @@ class MediaLibraryServiceIntegrationTest {
             withContext(NonCancellable) {
                 // Also handles setup failure; every mutation is scoped to this generated identity.
                 dao.deleteBook(fixture.id)
-                database.close()
+                // Borrowed Hilt singleton: closing it would break the running app/service graph.
             }
         }
     }
 
     private class Fixture(val context: Context, val database: AudioTalesDatabase) {
         val id = "service-qualification-${UUID.randomUUID()}"
-        val book = BookEntity(id, "Service qualification $id", "Qualification author")
+        val book = BookEntity(id, "Service qualification $id Лісова $id", "Qualification author $id Українка $id")
         val tracks = (0..1).map { index ->
             TrackEntity("$id-track-$index", id, "Qualification track $index",
                 "https://media.invalid/$id/$index.wav", index, durationMs = 60_000L)
@@ -238,10 +333,11 @@ class MediaLibraryServiceIntegrationTest {
         private val browsers = mutableListOf<MediaBrowser>()
         private var ownsQueue = false
 
-        suspend fun connect(): MediaBrowser {
+        suspend fun connect(listener: MediaBrowser.Listener? = null): MediaBrowser {
             val future = onMain {
                 MediaBrowser.Builder(context, SessionToken(context, component))
-                    .setApplicationLooper(Looper.getMainLooper()).buildAsync()
+                    .setApplicationLooper(Looper.getMainLooper())
+                    .apply { if (listener != null) setListener(listener) }.buildAsync()
             }
             futures.add(future)
             val browser = future.boundedAwait()

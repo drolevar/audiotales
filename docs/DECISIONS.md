@@ -52,6 +52,8 @@ One `MediaLibraryService` owns one ExoPlayer and its `MediaLibrarySession`. Phon
 
 Expose a browsable media library through the standard Android Auto media integration. Custom car templates are deferred. Handle audio focus, headphone disconnection, background playback, process recreation, and durable progress as core playback concerns.
 
+Clarified on 2026-10-28: Android Auto must expose **My books** as the saved collection. Its Search searches the online libraries selected in Browse; a saved-book-only search does not satisfy this requirement.
+
 Use stable book and track identifiers. Resolve playback requests to entries in the app's own library; do not trust arbitrary content URIs received from external controllers. Persist track identity and position, so multi-file books do not rely on a single-file position model.
 
 An empty browsable library is sufficient for the first scaffold. Import, real playback queues, resume restoration, voice search, chapter extraction, and car acceptance testing are implementation milestones.

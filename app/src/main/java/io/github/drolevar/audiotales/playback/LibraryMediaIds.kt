@@ -3,6 +3,7 @@ package io.github.drolevar.audiotales.playback
 /** Stable, opaque IDs shared by the phone and external media browsers. */
 internal object LibraryMediaIds {
     const val ROOT = "audiotales:library"
+    const val MY_BOOKS = "audiotales:my-books"
     private const val BOOK_PREFIX = "book:"
     private const val TRACK_PREFIX = "track:"
 

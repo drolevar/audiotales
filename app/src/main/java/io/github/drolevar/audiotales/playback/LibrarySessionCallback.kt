@@ -18,6 +18,8 @@ import com.google.common.util.concurrent.ListenableFuture
 import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryRepository
 import io.github.drolevar.audiotales.data.library.LibraryTrack
+import io.github.drolevar.audiotales.data.online.OnlineCatalogue
+import io.github.drolevar.audiotales.data.online.OnlineBookDetailsSource
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
@@ -25,25 +27,45 @@ import kotlinx.coroutines.guava.future
 
 internal val prepareBookRemovalCommand = SessionCommand("io.github.drolevar.audiotales.PREPARE_BOOK_REMOVAL", Bundle.EMPTY)
 internal const val BOOK_REMOVAL_TOKEN = "bookRemovalToken"
+// The platform browse-search key has no public MediaConstants alias in Media3 1.11.1.
+private const val SEARCH_SUPPORTED = "android.media.browse.SEARCH_SUPPORTED"
 
 @androidx.annotation.OptIn(UnstableApi::class)
 internal class LibrarySessionCallback(
     private val library: LibraryRepository,
     private val scope: CoroutineScope,
     rootTitle: String,
+    myBooksTitle: String,
     private val storage: MediaStorage,
     private val progress: PlaybackProgressRecorder,
     private val sleepTimer: SleepTimerController,
     private val appPackageName: String,
     private val appUid: Int,
     private val bookRemovalGuard: BookRemovalGuard,
+    onlineCatalogue: OnlineCatalogue,
+    private val onlineDetails: OnlineBookDetailsSource,
 ) : MediaLibrarySession.Callback {
     private val resolver = PlaybackItemResolver(library)
+    private val catalogue = CarCatalogueBrowser(onlineCatalogue)
+    private data class SearchKey(val browser: MediaSession.ControllerInfo, val query: String)
+    private class SearchSnapshot(var items: List<CarCatalogueItem>? = null, var error: Boolean = false)
+    private val searches = linkedMapOf<SearchKey, SearchSnapshot>()
     private val root = MediaItem.Builder()
         .setMediaId(LibraryMediaIds.ROOT)
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle(rootTitle)
+                .setIsBrowsable(true)
+                .setIsPlayable(false)
+                .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+                .build(),
+        )
+        .build()
+    private val myBooks = MediaItem.Builder()
+        .setMediaId(LibraryMediaIds.MY_BOOKS)
+        .setMediaMetadata(
+            MediaMetadata.Builder()
+                .setTitle(myBooksTitle)
                 .setIsBrowsable(true)
                 .setIsPlayable(false)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
@@ -88,6 +110,8 @@ internal class LibrarySessionCallback(
             val token = args.getString(BOOK_REMOVAL_TOKEN)
             if (!bookRemovalGuard.owns(bookId, token)) return@future SessionResult(SessionError.ERROR_INVALID_STATE)
             try {
+                bookRemovalGuard.awaitAdditions()
+                if (!bookRemovalGuard.owns(bookId, token)) return@future SessionResult(SessionError.ERROR_INVALID_STATE)
                 if (session.player.currentMediaItem?.mediaMetadata?.extras?.getString("bookId") == bookId) {
                     session.player.pause()
                     progress.flushCurrent()
@@ -130,7 +154,12 @@ internal class LibrarySessionCallback(
         browser: MediaSession.ControllerInfo,
         params: LibraryParams?,
     ): ListenableFuture<LibraryResult<MediaItem>> =
-        Futures.immediateFuture(LibraryResult.ofItem(root, params))
+        Futures.immediateFuture(LibraryResult.ofItem(root, LibraryParams.Builder()
+            .setOffline(params?.isOffline ?: false)
+            .setRecent(params?.isRecent ?: false)
+            .setSuggested(params?.isSuggested ?: false)
+            .setExtras(Bundle(params?.extras ?: Bundle.EMPTY).apply { putBoolean(SEARCH_SUPPORTED, true) })
+            .build()))
 
     override fun onGetChildren(
         session: MediaLibrarySession,
@@ -144,7 +173,10 @@ internal class LibrarySessionCallback(
             return@readLibrary LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
         }
         val children = when {
-            parentId == LibraryMediaIds.ROOT -> library.observeBooks().first().map { it.toMediaItem() }
+            parentId == LibraryMediaIds.ROOT -> listOf(myBooks)
+            parentId == LibraryMediaIds.MY_BOOKS -> library.observeBooks().first().map { it.toMediaItem() }
+            catalogue.item(parentId) is CarCatalogueItem.Folder ->
+                requireNotNull(catalogue.children(parentId)).map { it.toMediaItem() }
             LibraryMediaIds.bookId(parentId) != null -> {
                 val bookId = requireNotNull(LibraryMediaIds.bookId(parentId))
                 if (library.getBook(bookId) == null) {
@@ -155,9 +187,57 @@ internal class LibrarySessionCallback(
             else -> return@readLibrary LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
         }
         // Auto requests an unpaged list. Other browsers may request individual pages.
-        val fromIndex = (page.toLong() * pageSize).coerceAtMost(children.size.toLong()).toInt()
-        val toIndex = (fromIndex.toLong() + pageSize).coerceAtMost(children.size.toLong()).toInt()
-        LibraryResult.ofItemList(children.subList(fromIndex, toIndex), params)
+        LibraryResult.ofItemList(children.libraryPage(page, pageSize), params)
+    }
+
+    override fun onSearch(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<Void>> {
+        val key = SearchKey(browser, query)
+        val snapshot = SearchSnapshot()
+        searches.remove(key)
+        searches[key] = snapshot
+        while (searches.size > 16) searches.remove(searches.keys.first())
+        return readLibrary(params, onReadFailure = {
+            snapshot.error = true
+            // Legacy search ignores the future; it needs this notification even on error.
+            if (searches[key] == null || searches[key] === snapshot) {
+                session.notifySearchResultChanged(browser, query, 0, params)
+            }
+        }) {
+            val items = catalogue.search(query)
+            if (searches[key] === snapshot) {
+                snapshot.items = items
+                session.notifySearchResultChanged(browser, query, items.size, params)
+            } else if (searches[key] == null) {
+                session.notifySearchResultChanged(browser, query, 0, params)
+            }
+            LibraryResult.ofVoid(params)
+        }
+    }
+
+    override fun onGetSearchResult(
+        session: MediaLibrarySession,
+        browser: MediaSession.ControllerInfo,
+        query: String,
+        page: Int,
+        pageSize: Int,
+        params: LibraryParams?,
+    ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = readLibrary(params) {
+        if (page < 0 || pageSize < 1) {
+            return@readLibrary LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
+        }
+        val snapshot = searches[SearchKey(browser, query)]
+            ?: return@readLibrary LibraryResult.ofError(SessionError.ERROR_INVALID_STATE)
+        if (snapshot.error) return@readLibrary LibraryResult.ofError(SessionError.ERROR_IO)
+        val matches = snapshot.items ?: return@readLibrary LibraryResult.ofError(SessionError.ERROR_INVALID_STATE)
+        if (matches.any { catalogue.item(it.mediaId) == null }) {
+            return@readLibrary LibraryResult.ofError(SessionError.ERROR_INVALID_STATE)
+        }
+        LibraryResult.ofItemList(matches.libraryPage(page, pageSize).map { it.toMediaItem() }, params)
     }
 
     override fun onGetItem(
@@ -167,6 +247,8 @@ internal class LibrarySessionCallback(
     ): ListenableFuture<LibraryResult<MediaItem>> = readLibrary {
         val item = when {
             mediaId == LibraryMediaIds.ROOT -> root
+            mediaId == LibraryMediaIds.MY_BOOKS -> myBooks
+            catalogue.item(mediaId) != null -> catalogue.item(mediaId)?.toMediaItem()
             LibraryMediaIds.bookId(mediaId) != null -> {
                 library.getBook(requireNotNull(LibraryMediaIds.bookId(mediaId)))?.toMediaItem()
             }
@@ -188,6 +270,16 @@ internal class LibrarySessionCallback(
         controller: MediaSession.ControllerInfo,
         mediaItems: List<MediaItem>,
     ): ListenableFuture<List<MediaItem>> = scope.future {
+        require(mediaItems.none { it.localConfiguration != null || it.requestMetadata.mediaUri != null })
+        if (mediaItems.size == 1 && catalogue.item(mediaItems.single().mediaId) is CarCatalogueItem.Book) {
+            val generation = bookRemovalGuard.additionGeneration()
+            val bookId = saveSearchSelection(mediaItems.single().mediaId, generation)
+            val items = resolver.resolveBook(bookId).tracks.map { it.toMediaItem(includeLocation = true) }
+            rejectPendingRemovalItems(items)
+            catalogue.selectedBook(mediaItems.single().mediaId)
+            bookRemovalGuard.checkAdditionGeneration(generation)
+            return@future items
+        }
         rejectPendingRemovalRequests(mediaItems)
         val requests = mediaItems.map { item ->
             PlaybackRequest(
@@ -209,8 +301,11 @@ internal class LibrarySessionCallback(
     ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> = scope.future {
         require(mediaItems.none { it.localConfiguration != null || it.requestMetadata.mediaUri != null })
         rejectPendingRemovalRequests(mediaItems)
+        val onlineId = mediaItems.singleOrNull()?.mediaId?.takeIf { catalogue.item(it) is CarCatalogueItem.Book }
+        val generation = onlineId?.let { bookRemovalGuard.additionGeneration() }
+        val selectedBookId = onlineId?.let { saveSearchSelection(it, requireNotNull(generation)) }
         progress.flushCurrent()
-        val bookId = mediaItems.singleOrNull()?.mediaId?.let(LibraryMediaIds::bookId)
+        val bookId = selectedBookId ?: mediaItems.singleOrNull()?.mediaId?.let(LibraryMediaIds::bookId)
         val result = if (bookId != null) {
             val queue = resolver.resolveBook(bookId)
             MediaSession.MediaItemsWithStartPosition(
@@ -234,7 +329,32 @@ internal class LibrarySessionCallback(
             }
         }
         rejectPendingRemovalItems(result.mediaItems)
+        if (generation != null) {
+            catalogue.selectedBook(requireNotNull(onlineId))
+            bookRemovalGuard.checkAdditionGeneration(generation)
+        }
         result
+    }
+
+    private suspend fun saveSearchSelection(mediaId: String, generation: Long): String {
+        val selected = catalogue.selectedBook(mediaId)
+        val saved = library.observeBooks().first().firstOrNull {
+            it.providerId == selected.libraryId && it.providerBookId == selected.remoteId
+        }
+        if (saved != null) {
+            bookRemovalGuard.checkAdditionGeneration(generation)
+            require(!bookRemovalGuard.isReserved(saved.id))
+            return saved.id
+        }
+        val resolved = onlineDetails.inspectBook(selected.libraryId, selected.remoteId)
+        require(resolved.providerId == selected.libraryId && resolved.providerBookId == selected.remoteId)
+        // Selection may change while the provider resolves its playlist; never save a stale source.
+        catalogue.selectedBook(mediaId)
+        return bookRemovalGuard.withAddition(generation) { library.addOnlineBook(resolved).book.id }
+    }
+
+    override fun onDisconnected(session: MediaSession, controller: MediaSession.ControllerInfo) {
+        searches.keys.removeAll { it.browser == controller }
     }
 
     private suspend fun rejectPendingRemovalRequests(items: List<MediaItem>) {
@@ -257,13 +377,16 @@ internal class LibrarySessionCallback(
         parentId: String,
         params: LibraryParams?,
     ): ListenableFuture<LibraryResult<Void>> = readLibrary(params) {
-        if (parentId == LibraryMediaIds.ROOT || LibraryMediaIds.bookId(parentId)?.let { library.getBook(it) } != null) {
+        if (parentId == LibraryMediaIds.ROOT || parentId == LibraryMediaIds.MY_BOOKS ||
+            catalogue.item(parentId) is CarCatalogueItem.Folder ||
+            LibraryMediaIds.bookId(parentId)?.let { library.getBook(it) } != null) {
             LibraryResult.ofVoid(params)
         } else LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
     }
 
     private fun <T : Any> readLibrary(
         params: LibraryParams? = null,
+        onReadFailure: () -> Unit = {},
         block: suspend () -> LibraryResult<T>,
     ): ListenableFuture<LibraryResult<T>> = scope.future {
         try {
@@ -271,6 +394,7 @@ internal class LibrarySessionCallback(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
+            onReadFailure()
             // A failed read must remain distinguishable from a successfully empty library.
             LibraryResult.ofError<T>(SessionError.ERROR_IO, params)
         }
@@ -287,6 +411,27 @@ internal class LibrarySessionCallback(
                 .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK)
                 .build(),
         )
+        .build()
+
+    private fun CarCatalogueItem.toMediaItem(): MediaItem = MediaItem.Builder()
+        .setMediaId(mediaId)
+        .setMediaMetadata(MediaMetadata.Builder().apply {
+            when (this@toMediaItem) {
+                is CarCatalogueItem.Book -> {
+                    setTitle(book.displayTitle)
+                    setArtist(book.author)
+                    setIsBrowsable(false)
+                    setIsPlayable(true)
+                    setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK)
+                }
+                is CarCatalogueItem.Folder -> {
+                    setTitle(title)
+                    setIsBrowsable(true)
+                    setIsPlayable(false)
+                    setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
+                }
+            }
+        }.build())
         .build()
 
     private suspend fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem =

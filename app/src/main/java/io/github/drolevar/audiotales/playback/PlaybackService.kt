@@ -15,6 +15,8 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.github.drolevar.audiotales.MainActivity
 import io.github.drolevar.audiotales.R
 import io.github.drolevar.audiotales.data.library.LibraryRepository
+import io.github.drolevar.audiotales.data.online.OnlineCatalogue
+import io.github.drolevar.audiotales.data.online.OnlineBookDetailsSource
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -32,6 +34,8 @@ class PlaybackService : MediaLibraryService() {
     @Inject lateinit var library: LibraryRepository
     @Inject lateinit var storage: MediaStorage
     @Inject lateinit var bookRemovalGuard: BookRemovalGuard
+    @Inject internal lateinit var onlineCatalogue: OnlineCatalogue
+    @Inject internal lateinit var onlineDetails: OnlineBookDetailsSource
 
     private val libraryScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var librarySession: MediaLibrarySession? = null
@@ -75,15 +79,15 @@ class PlaybackService : MediaLibraryService() {
             this,
             player,
             LibrarySessionCallback(
-                library, libraryScope, getString(R.string.media_library_title), storage, progress,
-                sleepTimer, packageName, Process.myUid(), bookRemovalGuard,
+                library, libraryScope, getString(R.string.media_library_title), getString(R.string.my_books), storage, progress,
+                sleepTimer, packageName, Process.myUid(), bookRemovalGuard, onlineCatalogue, onlineDetails,
             ),
         )
             .setSessionActivity(openApp)
             .build()
         libraryObserver = libraryScope.launch {
             library.observeBooks().distinctUntilChanged().catch { /* Browsing reports its own read error. */ }
-                .collect { books -> librarySession?.notifyChildrenChanged(LibraryMediaIds.ROOT, books.size, null) }
+                .collect { books -> librarySession?.notifyChildrenChanged(LibraryMediaIds.MY_BOOKS, books.size, null) }
         }
     }
 
