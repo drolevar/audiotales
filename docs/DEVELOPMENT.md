@@ -503,8 +503,15 @@ tests then passed on each of API 26 and API 37.2: real session/platform artwork,
 image failure/retry, saved-cover refresh, queued-success cancellation, canonical
 controller data, clipped cached playback and progress barriers. The native
 callback test also reproduces the upstream empty-metadata failure policy as a
-control before verifying the fix. These use isolated fixtures; actual projected
-Android Auto and notification appearance require separate runtime evidence.
+control before verifying the fix. These use isolated fixtures.
+
+The signed/minified test candidate from `47eea13` was then installed in place on
+the physical API 28 phone. Actual projected Android Auto Now playing and the
+native phone media notification displayed the same saved cover as the phone
+player, with the separate author. Brief streaming and native Pause used the
+shared service. The installed APK hash matched the verified candidate. This
+qualifies the sampled artwork paths; it does not complete voice, rotary,
+headset/Bluetooth or general car qualification.
 
 ## Primary references
 
