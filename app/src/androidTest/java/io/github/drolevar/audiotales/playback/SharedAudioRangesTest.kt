@@ -105,7 +105,7 @@ class SharedAudioRangesTest {
                 val recorder = PlaybackProgressRecorder(player, library) {}
                 recorder.start(scope)
                 try {
-                    val items = tracks.map { it.toPlaybackMediaItem("Book", storage, includeLocation = true) }
+                    val items = tracks.map { it.toPlaybackMediaItem(LibraryBook("book", "Book"), storage, includeLocation = true) }
                     assertEquals(listOf(0L, 1_000L, 2_000L, 3_000L), items.map { it.clippingConfiguration.startPositionMs })
                     assertEquals(listOf(1_000L, 2_000L, 3_000L, 4_000L), items.map { it.clippingConfiguration.endPositionMs })
                     assertEquals(setOf("book-audio"), items.map { it.localConfiguration!!.customCacheKey }.toSet())
@@ -119,6 +119,21 @@ class SharedAudioRangesTest {
                     await { player.currentMediaItemIndex == 3 && player.playbackState == Player.STATE_READY }
                     assertEquals(1_000L, player.duration)
                     assertEquals(250L, player.currentPosition)
+                    val oldArtwork = player.mediaMetadata.artworkUri
+                    refreshQueuedBookArtwork(player, listOf(LibraryBook("book", "Book",
+                        coverUrl = "https://covers.invalid/book.png")))
+                    assertEquals(3, player.currentMediaItemIndex)
+                    assertEquals(250L, player.currentPosition)
+                    assertEquals(Player.STATE_READY, player.playbackState)
+                    assertFalse(player.playWhenReady)
+                    assertEquals(1_000L, player.duration)
+                    assertTrue(oldArtwork != player.mediaMetadata.artworkUri)
+                    items.forEachIndexed { index, original ->
+                        val refreshed = player.getMediaItemAt(index)
+                        assertEquals(original.mediaId, refreshed.mediaId)
+                        assertEquals(original.localConfiguration, refreshed.localConfiguration)
+                        assertEquals(original.clippingConfiguration, refreshed.clippingConfiguration)
+                    }
                     recorder.flushCurrent()
                     assertEquals("clip-3", library.progress!!.trackId)
                     assertEquals(250L, library.progress!!.positionMs)

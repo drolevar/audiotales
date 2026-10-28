@@ -18,6 +18,17 @@ Room 3 schema versions 1–8 preserve books, ordered tracks, listening progress 
 
 One service-owned Media3 ExoPlayer supplies phone controls, background playback and external controllers. The phone uses Google's Media3 Compose controls. Progress is saved periodically and at playback transitions; opening a book does not autoplay. Explicit Retry refreshes online sources and rebuilds the queue from saved IDs. Completed offline books do not require a provider lookup.
 
+Shared Now playing metadata carries the book's author and an application-owned
+cover identity. The service's asynchronous bitmap loader resolves the saved
+book cover with the same provider headers and Coil cache as the phone player,
+with software images bounded to 512 pixels. It suppresses embedded track art;
+cover failures leave native placeholders without delaying audio. Artwork
+revisions and queue attempts invalidate Media3's cached image failures, and
+saved-cover refresh replaces only queue metadata. Empty-queue cancellation and
+an explicit unavailable-artwork future prevent a late Media3 1.11.1 legacy
+bitmap callback from restoring cleared book metadata. Car browse/search row
+thumbnails use a separate host path and remain follow-up work.
+
 Now playing follows the focused Figma composition with native Media3 transport, current-track seeking, speed, a service-owned sleep timer, and Material sheets for book information, tracks and downloads. Ordinary download operations retain active playback controls. Remove downloads keeps saved identity and history; the separate confirmed Remove book action removes downloaded audio and all saved book data. The service drains progress and blocks new playback of a book throughout full removal, including Activity/controller disconnection. Timers offer elapsed-minute presets and end of the current track; they survive screen navigation but are not restored after service/process death.
 
 Media3 DownloadManager/DownloadService own explicit downloads and a shared persistent cache. Queued, downloading, paused, failed and completed states come from that subsystem. Offline availability requires every required track to be complete with all expected bytes cached. Provider sections can share one downloaded recording, with each section played through native Media3 clipping and progress measured within its range. Removing downloads retains library identity and progress. Streaming does not silently populate the managed download cache.
@@ -482,6 +493,18 @@ headless runtime evidence for the sampled paths, with no physical-audio or Auto
 claim. Packaging checks alone did not detect the original failure.
 
 The first tag-triggered signed build, [v0.2.0](https://github.com/drolevar/audiotales/actions/runs/40661487817), succeeded on 2026-10-28 from commit `46f648b263fa6c8271edeb255eb9411e07c6f8ac`. The downloaded artifact's ZIP digest, file checksums, version/signature provenance and native alignment were independently verified. The exact GitHub-built APK then passed cold launch, sample partner-library registration/book lookup, short streaming and native Pause on API 26 and API 37.2. These checks cover the sampled headless release paths; physical audio and Android Auto acceptance remain separate. The same verified APK is now attached to the [v0.2.0 GitHub Release](https://github.com/drolevar/audiotales/releases/tag/v0.2.0); its downloaded release asset matches the tested SHA-256.
+
+### Shared book artwork verification — 2026-10-28
+
+Debug and minified release builds passed, with zero lint errors, 13 warnings
+and one hint in each variant. All 215 JVM tests passed. The metadata regression
+failed against the old implementation before the fix. All 25 focused Android
+tests then passed on each of API 26 and API 37.2: real session/platform artwork,
+image failure/retry, saved-cover refresh, queued-success cancellation, canonical
+controller data, clipped cached playback and progress barriers. The native
+callback test also reproduces the upstream empty-metadata failure policy as a
+control before verifying the fix. These use isolated fixtures; actual projected
+Android Auto and notification appearance require separate runtime evidence.
 
 ## Primary references
 

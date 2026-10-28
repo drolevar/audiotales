@@ -11,6 +11,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
+import coil3.SingletonImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.drolevar.audiotales.MainActivity
 import io.github.drolevar.audiotales.R
@@ -41,6 +42,7 @@ class PlaybackService : MediaLibraryService() {
     private var librarySession: MediaLibrarySession? = null
     private lateinit var progress: PlaybackProgressRecorder
     private lateinit var sleepTimer: SleepTimerController
+    private lateinit var artworkLoader: BookArtworkLoader
     private var libraryObserver: Job? = null
 
     override fun onCreate() {
@@ -75,6 +77,8 @@ class PlaybackService : MediaLibraryService() {
             Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        artworkLoader = BookArtworkLoader(this, library, libraryScope, SingletonImageLoader.get(this))
+        player.addListener(artworkLoader)
         librarySession = MediaLibrarySession.Builder(
             this,
             player,
@@ -84,10 +88,16 @@ class PlaybackService : MediaLibraryService() {
             ),
         )
             .setSessionActivity(openApp)
+            .setBitmapLoader(artworkLoader)
             .build()
         libraryObserver = libraryScope.launch {
             library.observeBooks().distinctUntilChanged().catch { /* Browsing reports its own read error. */ }
-                .collect { books -> librarySession?.notifyChildrenChanged(LibraryMediaIds.MY_BOOKS, books.size, null) }
+                .collect { books ->
+                    librarySession?.let { session ->
+                        refreshQueuedBookArtwork(session.player, books)
+                        session.notifyChildrenChanged(LibraryMediaIds.MY_BOOKS, books.size, null)
+                    }
+                }
         }
     }
 
@@ -98,6 +108,7 @@ class PlaybackService : MediaLibraryService() {
 
     override fun onDestroy() {
         libraryObserver?.cancel()
+        artworkLoader.close()
         sleepTimer.stop()
         val writer = progress.stop()
         librarySession?.let { session ->

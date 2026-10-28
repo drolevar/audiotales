@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Looper
 import android.os.Process
 import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -65,6 +66,46 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 class CarCatalogueSessionIntegrationTest {
+    @Test
+    fun canonicalBookMetadataOverridesCallerAndEmbeddedTrackArtwork() = runBlocking {
+        withFixture { fixture ->
+            val book = LibraryBook("canonical-cover", "Book title", "Book author",
+                coverUrl = "https://covers.invalid/book.jpg", coverReferer = "https://library.invalid/")
+            fixture.library.seed(book, tracks(book.id))
+            val supplied = MediaMetadata.Builder().setTitle("Caller title").setArtist("Caller artist")
+                .setArtworkData(byteArrayOf(1, 2, 3), MediaMetadata.PICTURE_TYPE_FRONT_COVER).build()
+            onMain {
+                fixture.browser.setMediaItem(MediaItem.Builder().setMediaId("track:${book.id}:0")
+                    .setMediaMetadata(supplied).build())
+            }
+            fixture.await("Canonical request did not reach the player") {
+                onMain { fixture.player.currentMediaItem?.mediaId == "track:${book.id}:0" }
+            }
+            onMain {
+                val metadata = fixture.player.mediaMetadata
+                assertEquals("Chapter 0", metadata.title.toString())
+                assertEquals(book.displayTitle, metadata.albumTitle.toString())
+                assertEquals("Book author", metadata.artist?.toString())
+                assertEquals("Book author", metadata.albumArtist?.toString())
+                assertTrue("Playback metadata must identify the repository book cover", metadata.artworkUri != null)
+                assertTrue(metadata.artworkUri.toString().startsWith("audiotales-artwork://book/"))
+                assertNull(metadata.artworkData)
+                // ExoPlayer merges extracted track metadata first, then the authoritative item.
+                val merged = supplied.buildUpon().populate(metadata).build()
+                assertEquals(metadata.artworkUri, merged.artworkUri)
+                assertNull("Book cover URI must clear unrelated embedded bytes", merged.artworkData)
+                assertEquals(2, fixture.player.mediaItemCount)
+                assertEquals(metadata.artworkUri, fixture.player.getMediaItemAt(1).mediaMetadata.artworkUri)
+                assertFalse(fixture.player.playWhenReady)
+            }
+            val originalUri = onMain { fixture.player.mediaMetadata.artworkUri }
+            onMain { fixture.browser.setMediaItem(MediaItem.Builder().setMediaId("book:${book.id}").build()) }
+            fixture.await("Explicit queue retry reused the cached artwork attempt") {
+                onMain { fixture.player.mediaMetadata.artworkUri != originalUri }
+            }
+        }
+    }
+
     @Test
     fun onlineSearchDoesNotSaveAndExplicitSelectionResolvesOnlyChosenBook() = runBlocking {
         withFixture { fixture ->

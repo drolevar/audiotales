@@ -298,3 +298,21 @@ validators afterward; physical headset/Bluetooth checks will be user-run. These
 results remain distinct from preparing and signing the APK. This supersedes the
 earlier delivery order that placed release-pipeline work after all reliability
 qualification.
+
+## 24. Book artwork in shared media controls — accepted 2026-10-28
+
+Android Auto Now playing and Android's media notification must use the saved
+book cover used by the phone player. Embedded track pictures must not replace
+that cover. Missing or failed cover artwork leaves the host's placeholder and
+must not delay or prevent audio playback.
+
+Publish repository-owned book artwork identity and author on the shared
+service's chapter metadata, retaining the actual chapter title, book album
+title and stable playback IDs. Resolve artwork asynchronously through the
+session's bitmap loader using the same Coil singleton, provider headers and
+image cache as the phone UI. Bound decoded bitmap size and service lifetime;
+never interpret a controller-supplied artwork URL or file path as authority.
+Cached artwork remains subject to Coil cache availability; this does not
+promise a permanent offline cover store. Keep native host layout and controls.
+Car browse/search thumbnail transport is separate from shared Now playing
+artwork, because legacy hosts can load those images through different APIs.

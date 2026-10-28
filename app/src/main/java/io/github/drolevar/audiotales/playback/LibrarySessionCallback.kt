@@ -4,6 +4,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.C
 import android.os.Bundle
+import android.net.Uri
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.LibraryResult
 import androidx.media3.session.MediaLibraryService.LibraryParams
@@ -24,6 +25,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
+import java.util.UUID
 
 internal val prepareBookRemovalCommand = SessionCommand("io.github.drolevar.audiotales.PREPARE_BOOK_REMOVAL", Bundle.EMPTY)
 internal const val BOOK_REMOVAL_TOKEN = "bookRemovalToken"
@@ -182,7 +184,7 @@ internal class LibrarySessionCallback(
                 if (library.getBook(bookId) == null) {
                     return@readLibrary LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
                 }
-                library.getTracks(bookId).map { it.toMediaItem(includeLocation = false) }
+                library.getTracks(bookId).toMediaItems(includeLocation = false)
             }
             else -> return@readLibrary LibraryResult.ofError(SessionError.ERROR_BAD_VALUE)
         }
@@ -274,7 +276,7 @@ internal class LibrarySessionCallback(
         if (mediaItems.size == 1 && catalogue.item(mediaItems.single().mediaId) is CarCatalogueItem.Book) {
             val generation = bookRemovalGuard.additionGeneration()
             val bookId = saveSearchSelection(mediaItems.single().mediaId, generation)
-            val items = resolver.resolveBook(bookId).tracks.map { it.toMediaItem(includeLocation = true) }
+            val items = resolver.resolveBook(bookId).tracks.toMediaItems(includeLocation = true)
             rejectPendingRemovalItems(items)
             catalogue.selectedBook(mediaItems.single().mediaId)
             bookRemovalGuard.checkAdditionGeneration(generation)
@@ -287,7 +289,7 @@ internal class LibrarySessionCallback(
                 hasExternalLocation = item.localConfiguration != null || item.requestMetadata.mediaUri != null,
             )
         }
-        val resolved = resolver.resolve(requests).map { it.toMediaItem(includeLocation = true) }
+        val resolved = resolver.resolve(requests).toMediaItems(includeLocation = true)
         rejectPendingRemovalItems(resolved)
         resolved
     }
@@ -309,7 +311,7 @@ internal class LibrarySessionCallback(
         val result = if (bookId != null) {
             val queue = resolver.resolveBook(bookId)
             MediaSession.MediaItemsWithStartPosition(
-                queue.tracks.map { it.toMediaItem(includeLocation = true) },
+                queue.tracks.toMediaItems(includeLocation = true),
                 queue.startIndex,
                 queue.startPositionMs,
             )
@@ -318,13 +320,13 @@ internal class LibrarySessionCallback(
             if (tracks.size == 1) {
                 val queue = resolver.resolveBook(tracks.single().bookId)
                 MediaSession.MediaItemsWithStartPosition(
-                    queue.tracks.map { it.toMediaItem(includeLocation = true) },
+                    queue.tracks.toMediaItems(includeLocation = true),
                     queue.tracks.indexOfFirst { it.id == tracks.single().id },
                     startPositionMs.takeUnless { it == C.TIME_UNSET } ?: 0,
                 )
             } else {
                 MediaSession.MediaItemsWithStartPosition(
-                    tracks.map { it.toMediaItem(includeLocation = true) }, startIndex, startPositionMs,
+                    tracks.toMediaItems(includeLocation = true), startIndex, startPositionMs,
                 )
             }
         }
@@ -434,22 +436,41 @@ internal class LibrarySessionCallback(
         }.build())
         .build()
 
-    private suspend fun LibraryTrack.toMediaItem(includeLocation: Boolean): MediaItem =
-        toPlaybackMediaItem(library.getBook(bookId)?.displayTitle, storage, includeLocation)
+    private suspend fun List<LibraryTrack>.toMediaItems(includeLocation: Boolean): List<MediaItem> {
+        // Both session and notification wrap the loader in a last-result cache, including errors.
+        // An explicit queue selection/retry gets one fresh attempt shared by all its chapters.
+        val attempt = UUID.randomUUID().toString()
+        val books = map(LibraryTrack::bookId).distinct().associateWith { library.getBook(it) }
+        return map { it.toPlaybackMediaItem(books[it.bookId], storage, includeLocation, attempt) }
+    }
+
+    private suspend fun LibraryTrack.toMediaItem(
+        includeLocation: Boolean,
+        artworkAttempt: String = UUID.randomUUID().toString(),
+    ): MediaItem = toPlaybackMediaItem(library.getBook(bookId), storage, includeLocation, artworkAttempt)
 }
 
 /** Build only from repository-owned transport and bounds; player positions stay clip-relative. */
 @androidx.annotation.OptIn(UnstableApi::class)
 internal fun LibraryTrack.toPlaybackMediaItem(
-    bookTitle: String?,
+    book: LibraryBook?,
     storage: MediaStorage,
     includeLocation: Boolean,
+    artworkAttempt: String = UUID.randomUUID().toString(),
 ): MediaItem = MediaItem.Builder()
     .setMediaId(LibraryMediaIds.track(id))
     .setMediaMetadata(
         MediaMetadata.Builder()
             .setTitle(title)
-            .setAlbumTitle(bookTitle)
+            .setAlbumTitle(book?.displayTitle)
+            .setArtist(book?.author)
+            .setAlbumArtist(book?.author)
+            .apply {
+                // Playing queues always identify the book, even without a cover, clearing
+                // extracted artworkData. Browse-only thumbnails need separate host support.
+                if (includeLocation) setArtworkUri(Uri.parse(BookArtworkUris.forBook(
+                    bookId, book?.coverUrl, book?.coverReferer, artworkAttempt)))
+            }
             .setIsBrowsable(false)
             .setIsPlayable(true)
             .setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK_CHAPTER)

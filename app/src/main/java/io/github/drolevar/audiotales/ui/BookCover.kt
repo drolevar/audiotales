@@ -20,10 +20,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import coil3.network.NetworkHeaders
-import coil3.network.httpHeaders
-import coil3.request.ImageRequest
 import io.github.drolevar.audiotales.R
+import io.github.drolevar.audiotales.artwork.bookCoverRequestBuilder
 
 /** Dynamic provider artwork keeps its original aspect ratio in the caller's bounded slot. */
 @Composable
@@ -36,10 +34,7 @@ internal fun BookCover(
 ) {
     val context = LocalContext.current
     val request = remember(context, url, referer) {
-        val headers = NetworkHeaders.Builder().set("User-Agent", "AudioTales").apply {
-            referer?.let { set("Referer", it) }
-        }.build()
-        ImageRequest.Builder(context).data(url).httpHeaders(headers).build()
+        bookCoverRequestBuilder(context, url, referer).build()
     }
     var artworkLoaded by remember(url, referer) { mutableStateOf(false) }
     Surface(
