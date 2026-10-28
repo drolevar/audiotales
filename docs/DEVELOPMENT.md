@@ -22,7 +22,7 @@ Now playing follows the focused Figma composition with native Media3 transport, 
 
 Media3 DownloadManager/DownloadService own explicit downloads and a shared persistent cache. Queued, downloading, paused, failed and completed states come from that subsystem. Offline availability requires every required track to be complete with all expected bytes cached. Provider sections can share one downloaded recording, with each section played through native Media3 clipping and progress measured within its range. Removing downloads retains library identity and progress. Streaming does not silently populate the managed download cache.
 
-Material 3 adaptive navigation exposes My books, Browse and Settings. My books has progress-aware rows, All/In progress/Downloaded filters and Recent/Title/Author sorting. A secondary Downloads screen, reachable from saved rows and Settings, shows managed transfers, real track/byte progress, download details, pause/resume/retry and confirmed removal. Theme and device-color preferences persist in DataStore; real artwork is fitted without cropping in catalogue results/details, saved rows, the player and mini-player. Partner artwork requests include the library referer required by the image host. A bounded metadata-only refresh fills missing artwork for existing saved books without changing tracks or listening history; artwork failures do not block playback. Local M4B import is on hold with implementation undecided. Incoming book links, embedded chapters, bookmark UI, reporting and release signing remain follow-up work. Android Auto declarations are present but car compatibility has not been verified.
+Material 3 adaptive navigation exposes My books, Browse and Settings. My books has progress-aware rows, All/In progress/Downloaded filters and Recent/Title/Author sorting. A secondary Downloads screen, reachable from saved rows and Settings, shows managed transfers, real track/byte progress, download details, pause/resume/retry and confirmed removal. Theme and device-color preferences persist in DataStore; real artwork is fitted without cropping in catalogue results/details, saved rows, the player and mini-player. Partner artwork requests include the library referer required by the image host. A bounded metadata-only refresh fills missing artwork for existing saved books without changing tracks or listening history; artwork failures do not block playback. Local M4B import is on hold with implementation undecided. Embedded chapters, bookmark UI and reporting remain follow-up work. Signed build automation is described in [Signed Android builds](RELEASING.md). Android Auto declarations are present but car compatibility has not been verified.
 
 ### Provider access configuration
 
@@ -451,7 +451,7 @@ Actual signed candidates passed certificate, package/version, non-debuggable,
 ZIP alignment and ELF load-segment checks for all eight native libraries; a wrong
 signer was rejected. These were local validation builds with a test version
 input, not a pushed release tag or a GitHub-produced release artifact. A real
-tag-triggered run remains separate evidence.
+tag-triggered result is recorded below.
 
 The first minified cold launch exposed a startup failure in WorkManager 2.8.1's
 transitive Room 2.5 database: R8 removed `WorkDatabase_Impl`'s reflected public
@@ -462,6 +462,8 @@ registered the sample partner library, resolved its book information and track,
 and started and paused a short stream through the app's shared service. This is
 headless runtime evidence for the sampled paths, with no physical-audio or Auto
 claim. Packaging checks alone did not detect the original failure.
+
+The first tag-triggered signed build, [v0.2.0](https://github.com/drolevar/audiotales/actions/runs/40661487817), succeeded on 2026-10-28 from commit `46f648b263fa6c8271edeb255eb9411e07c6f8ac`. The downloaded artifact's ZIP digest, file checksums, version/signature provenance and native alignment were independently verified. The exact GitHub-built APK then passed cold launch, sample partner-library registration/book lookup, short streaming and native Pause on API 26 and API 37.2. These checks cover the sampled headless release paths; physical audio and Android Auto acceptance remain separate.
 
 ## Primary references
 
