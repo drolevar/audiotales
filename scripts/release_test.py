@@ -1,7 +1,15 @@
 """Pure release-boundary tests; no keys, Android tools, builds or network needed."""
+import hashlib
+import json
+from pathlib import Path
+import re
+import shutil
 import struct
+import subprocess
+import tempfile
 import unittest
 
+from release_publish import publish, remote_commit, verify_bundle
 from release_version import validate_order, version
 from release_verify import elf_load_alignments, fingerprint, signer_digest, verify_manifest
 
@@ -72,6 +80,206 @@ class ArtifactTests(unittest.TestCase):
                  elf(alignment=32769), elf(virtual=1), elf(file_offset=999999), elf(kind=2)]
         for data in cases:
             with self.subTest(data=data), self.assertRaises(ValueError): elf_load_alignments(data)
+
+
+class PublicationTests(unittest.TestCase):
+    tag, commit, signer, repo = 'v0.2.0', 'a' * 40, 'b' * 64, 'example/audiotales'
+
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.directory = Path(self.temporary.name) / 'assets'
+        self.directory.mkdir()
+        (self.directory / 'audiotales-0.2.0.apk').write_bytes(b'verified apk fixture')
+        (self.directory / 'mapping.txt').write_bytes(b'verified mapping fixture')
+        self.provenance = dict(tag=self.tag, commit=self.commit, version_name='0.2.0', version_code=2000,
+                               application_id='io.github.drolevar.audiotales', min_sdk=26, target_sdk=37,
+                               debuggable=False, apk='audiotales-0.2.0.apk',
+                               apk_sha256=self.hash('audiotales-0.2.0.apk'),
+                               mapping_sha256=self.hash('mapping.txt'), signing_certificate_sha256=self.signer)
+        self.write_provenance()
+        self.calls = []
+        self.draft = True
+        self.uploaded = False
+
+    def hash(self, name):
+        return hashlib.sha256((self.directory / name).read_bytes()).hexdigest()
+
+    def write_provenance(self):
+        (self.directory / 'provenance.json').write_text(json.dumps(self.provenance))
+        (self.directory / 'SHA256SUMS').write_text(''.join(
+            f'{self.hash(name)}  {name}\n' for name in ['audiotales-0.2.0.apk', 'mapping.txt', 'provenance.json']))
+
+    def fake_gh(self, *args):
+        self.calls.append(args)
+        if args[:3] == ('api', '--paginate', '--slurp'):
+            return '[[]]'
+        if args[0] == 'api':
+            return json.dumps(dict(object=dict(type='commit', sha=self.commit)))
+        command = args[1]
+        if command == 'create':
+            self.assertIn('--draft', args)
+            self.assertIn('--verify-tag', args)
+            notes = Path(args[args.index('--notes-file') + 1]).read_text()
+            self.assertIn('Android Auto', notes)
+            self.assertIn('pending', notes)
+            self.assertIn('.debug', notes)
+        elif command == 'upload':
+            self.assertNotIn('--clobber', args)
+            self.uploaded = True
+        elif command == 'view':
+            assets = [dict(name=path.name, size=path.stat().st_size)
+                      for path in self.directory.iterdir()] if self.uploaded else []
+            return json.dumps(dict(databaseId=42, tagName=self.tag, isDraft=self.draft,
+                                   assets=assets, url='https://github.com/example/audiotales/releases/tag/v0.2.0'))
+        elif command == 'download':
+            shutil.copytree(self.directory, args[args.index('--dir') + 1])
+        elif command == 'edit':
+            self.assertIn('--draft=false', args)
+            self.draft = False
+        else:
+            self.fail(f'Unexpected command: {args}')
+        return ''
+
+    def publish(self, run=None, **changes):
+        values = dict(directory=self.directory, tag=self.tag, commit=self.commit,
+                      repo=self.repo, expected_signer=self.signer, run=run or self.fake_gh)
+        values.update(changes)
+        return publish(**values)
+
+    def assert_not_published(self):
+        self.assertFalse(any(call[:2] == ('release', 'edit') for call in self.calls))
+
+    def test_publishes_only_after_exact_download_checks(self):
+        self.assertIn('/releases/tag/v0.2.0', self.publish())
+        commands = [call[1] for call in self.calls if call[0] == 'release']
+        self.assertEqual(commands, ['create', 'view', 'upload', 'view', 'download', 'view', 'edit', 'view'])
+        self.assertEqual(sum(call[0] == 'api' for call in self.calls), 3)
+
+    def test_workflow_upload_selection_excludes_signing_sidecars(self):
+        # Exercise the upload allowlist against a signer-shaped output directory.
+        # A directory upload or an APK-prefix glob must fail this boundary.
+        root = Path(self.temporary.name)
+        signed = root / 'release-artifacts'
+        shutil.copytree(self.directory, signed)
+        (signed / 'audiotales-0.2.0.apk.idsig').write_bytes(b'v4 signing sidecar')
+        (signed / 'unexpected.txt').write_text('not part of the verified bundle')
+        workflow = (Path(__file__).resolve().parent.parent / '.github/workflows/release.yml').read_text()
+        upload = workflow.split('        id: artifact\n', 1)[1].split('\n  publish:', 1)[0]
+        match = re.search(r'(?m)^          path: (.+)\n((?:            .+\n)*)', upload)
+        self.assertIsNotNone(match, 'Missing build artifact upload paths')
+        patterns = (match[2].splitlines() if match[1] == '|' else [match[1]])
+        selected = set()
+        for pattern in patterns:
+            pattern = pattern.strip().replace('${{ steps.version.outputs.version_name }}', self.tag[1:])
+            for path in root.glob(pattern):
+                selected.update(path.rglob('*') if path.is_dir() else [path])
+        staged = root / 'uploaded'
+        staged.mkdir()
+        for path in selected:
+            if path.is_file(): shutil.copy2(path, staged / path.name)
+        verify_bundle(staged, self.tag, self.commit, self.signer)
+        self.assertEqual({path.name for path in staged.iterdir()}, {path.name for path in self.directory.iterdir()})
+
+    def test_invalid_inputs_never_contact_github(self):
+        for values in [dict(tag='v0.2.0;echo bad'), dict(commit='main'), dict(repo='owner/repo/extra'),
+                       dict(expected_signer='c' * 64)]:
+            with self.subTest(values=values), self.assertRaises(ValueError):
+                self.publish(**values)
+        self.assertEqual(self.calls, [])
+
+    def test_bundle_rejects_wrong_identity_even_with_valid_checksums(self):
+        for key, wrong in [('tag', 'v0.3.0'), ('commit', 'c' * 40), ('version_code', 1),
+                           ('application_id', 'io.github.drolevar.audiotales.debug'), ('debuggable', True)]:
+            original = self.provenance[key]
+            self.provenance[key] = wrong
+            self.write_provenance()
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.publish()
+            self.provenance[key] = original
+        self.assertEqual(self.calls, [])
+
+    def test_bundle_rejects_corruption_extra_missing_and_symlink_assets(self):
+        apk = self.directory / 'audiotales-0.2.0.apk'
+        original = apk.read_bytes()
+        apk.write_bytes(b'corrupt')
+        with self.assertRaises(ValueError): self.publish()
+        apk.write_bytes(original)
+        extra = self.directory / 'extra'
+        extra.write_text('unexpected')
+        with self.assertRaises(ValueError): self.publish()
+        extra.unlink()
+        apk.unlink()
+        with self.assertRaises(ValueError): self.publish()
+        apk.symlink_to(self.directory / 'mapping.txt')
+        with self.assertRaises(ValueError): self.publish()
+        self.assertEqual(self.calls, [])
+
+    def test_existing_draft_or_published_release_is_never_changed(self):
+        for draft in (True, False):
+            def existing(*args):
+                self.calls.append(args)
+                return json.dumps([[dict(tag_name=self.tag, draft=draft)]])
+            with self.subTest(draft=draft), self.assertRaises(ValueError): self.publish(existing)
+        self.assertTrue(all(call[0] == 'api' for call in self.calls))
+
+    def test_api_failure_is_not_treated_as_missing_release(self):
+        def failing(*args):
+            raise subprocess.CalledProcessError(1, 'gh')
+        with self.assertRaises(subprocess.CalledProcessError): self.publish(failing)
+        self.assert_not_published()
+
+    def test_wrong_or_moved_remote_tag_is_not_published(self):
+        for moved_after_upload in (False, True):
+            self.setUp()
+            def moved(*args):
+                if args[0] == 'api' and 'git/ref/' in args[-1] and (self.uploaded or not moved_after_upload):
+                    return json.dumps(dict(object=dict(type='commit', sha='c' * 40)))
+                return self.fake_gh(*args)
+            with self.subTest(moved_after_upload=moved_after_upload), self.assertRaises(ValueError):
+                self.publish(moved)
+            self.assert_not_published()
+
+    def test_upload_failure_or_wrong_remote_state_never_calls_publication(self):
+        for failure in ('upload', 'asset_names', 'release_identity', 'published_early', 'download'):
+            self.setUp()
+            def failing(*args):
+                result = self.fake_gh(*args)
+                if args[:2] == ('release', 'upload') and failure == 'upload':
+                    raise subprocess.CalledProcessError(1, 'gh')
+                if args[:2] == ('release', 'view') and self.uploaded:
+                    state = json.loads(result)
+                    if failure == 'asset_names': state['assets'][0]['name'] = 'unexpected.apk'
+                    if failure == 'release_identity': state['databaseId'] = 99
+                    if failure == 'published_early': state['isDraft'] = False
+                    return json.dumps(state)
+                if args[:2] == ('release', 'download') and failure == 'download':
+                    (Path(args[args.index('--dir') + 1]) / 'mapping.txt').write_text('corrupt')
+                return result
+            with self.subTest(failure=failure), self.assertRaises((ValueError, subprocess.CalledProcessError)):
+                self.publish(failing)
+            self.assert_not_published()
+
+    def test_internally_consistent_replacement_download_is_not_published(self):
+        def replaced(*args):
+            result = self.fake_gh(*args)
+            if args[:2] == ('release', 'download'):
+                downloaded = Path(args[args.index('--dir') + 1])
+                (downloaded / 'mapping.txt').write_bytes(b'replacement mapping')
+                provenance = json.loads((downloaded / 'provenance.json').read_text())
+                provenance['mapping_sha256'] = hashlib.sha256((downloaded / 'mapping.txt').read_bytes()).hexdigest()
+                (downloaded / 'provenance.json').write_text(json.dumps(provenance))
+                (downloaded / 'SHA256SUMS').write_text(''.join(
+                    f'{hashlib.sha256((downloaded / name).read_bytes()).hexdigest()}  {name}\n'
+                    for name in ['audiotales-0.2.0.apk', 'mapping.txt', 'provenance.json']))
+            return result
+        with self.assertRaises(ValueError): self.publish(replaced)
+        self.assert_not_published()
+
+    def test_annotated_remote_tag_is_dereferenced(self):
+        responses = [dict(object=dict(type='tag', sha='c' * 40)),
+                     dict(object=dict(type='commit', sha=self.commit))]
+        self.assertEqual(remote_commit(lambda *args: json.dumps(responses.pop(0)), self.repo, self.tag), self.commit)
 
 
 if __name__ == '__main__':

@@ -279,9 +279,16 @@ Use the existing maintainer signing identity selected for AudioTales, and retain
 that identity for future updates. Keep key material and passwords out
 of Git. Verify the signed APK's identity, version, signature and native-library
 alignment, and retain its checksum, source commit and R8 mapping with the build.
-The immediate deliverable is a downloadable GitHub Actions build artifact.
-Creating a GitHub Release, store publishing and making the repository public are
-separate actions.
+The initial deliverable was a downloadable GitHub Actions build artifact.
+The user's 2026-10-28 clarification also requires an actual GitHub Release.
+Future stable-tag pushes publish the exact verified APK, R8 mapping, provenance
+and checksums through a separate job with job-scoped repository write access
+and no signing or partner-client secrets. Stage a draft and publish only after
+all four remote assets match the verified build and the tag still names its
+source commit. Keep existing Releases, assets and tags immutable; fail closed on
+an existing draft or published Release and retain the 30-day Actions artifact
+for recovery. Store publishing and making the repository public remain separate
+actions. See [release preparation](RELEASING.md) for verification and recovery.
 
 The user prioritized obtaining a release build from GitHub before the remaining
 Android Auto qualification. Continue Auto checks with available emulators and

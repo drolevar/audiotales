@@ -435,13 +435,15 @@ Resume was accepted online before connectivity was removed: incomplete downloads
 
 ## Release preparation
 
-The [signed-build workflow](RELEASING.md) validates stable version-tag pushes and
-produces an APK artifact with its checksum, source/version provenance and R8
-mapping. Signing credentials are supplied only after the unsigned release build,
-release lint and shared-source JVM tests pass. Ordinary branch/PR CI stays
-unsigned. Keep signing keys and credentials outside Git; creating a GitHub
-Release, store publishing and a public repository transition remain separate
-decisions.
+The [release workflow](RELEASING.md) validates stable version-tag pushes and
+publishes a [GitHub Release](https://github.com/drolevar/audiotales/releases) with
+the exact signed APK, checksums, source/version provenance and R8 mapping,
+retaining the Actions artifact for 30 days. Signing credentials are supplied
+only after the unsigned release build, release lint and shared-source JVM tests
+pass. A separate publishing job verifies all draft assets before publication
+and fails closed on existing Releases. Ordinary branch/PR CI stays unsigned.
+Keep signing keys and credentials outside Git; store publishing and a public
+repository transition remain separate decisions.
 
 Local validation on 2026-10-28 built the minified `0.2.0` candidate, ran release
 lint and all 190 JVM tests with no failures, errors or skips. The normal debug
@@ -463,7 +465,7 @@ and started and paused a short stream through the app's shared service. This is
 headless runtime evidence for the sampled paths, with no physical-audio or Auto
 claim. Packaging checks alone did not detect the original failure.
 
-The first tag-triggered signed build, [v0.2.0](https://github.com/drolevar/audiotales/actions/runs/40661487817), succeeded on 2026-10-28 from commit `46f648b263fa6c8271edeb255eb9411e07c6f8ac`. The downloaded artifact's ZIP digest, file checksums, version/signature provenance and native alignment were independently verified. The exact GitHub-built APK then passed cold launch, sample partner-library registration/book lookup, short streaming and native Pause on API 26 and API 37.2. These checks cover the sampled headless release paths; physical audio and Android Auto acceptance remain separate.
+The first tag-triggered signed build, [v0.2.0](https://github.com/drolevar/audiotales/actions/runs/40661487817), succeeded on 2026-10-28 from commit `46f648b263fa6c8271edeb255eb9411e07c6f8ac`. The downloaded artifact's ZIP digest, file checksums, version/signature provenance and native alignment were independently verified. The exact GitHub-built APK then passed cold launch, sample partner-library registration/book lookup, short streaming and native Pause on API 26 and API 37.2. These checks cover the sampled headless release paths; physical audio and Android Auto acceptance remain separate. The same verified APK is now attached to the [v0.2.0 GitHub Release](https://github.com/drolevar/audiotales/releases/tag/v0.2.0); its downloaded release asset matches the tested SHA-256.
 
 ## Primary references
 
