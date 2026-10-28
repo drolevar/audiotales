@@ -2,9 +2,12 @@
 
 An audiobook player for Android, built for discovering books in online libraries and enjoying them online or offline—at home, on a walk, or in the car.
 
-**AudioTales is in early development. There is no public app release yet.**
+**AudioTales is in early development.** Preview APKs are available from
+[GitHub Releases](https://github.com/drolevar/audiotales/releases/latest) for
+people with access to this repository. Install the signed APK to update an
+existing release installation while keeping your books and listening progress.
 
-## Available in the development build
+## Available in preview builds
 
 - Add compatible online libraries by their website addresses, choose which to search, browse results by library, and save books to My books.
 - Browse a library separately, rename it, share its address, or remove it from Browse while keeping your saved books and downloads.
@@ -14,7 +17,9 @@ An audiobook player for Android, built for discovering books in online libraries
 - Share a supported book link from your browser to AudioTales to open its details. Opening a link does not save the book or start playback; a new library requires your confirmation.
 - Filter saved books by listening or download state, and sort by recent listening, title or author.
 - Listen with play/pause, seeking, speed and track controls, and resume your saved position.
+- Set a sleep timer for a chosen duration or the end of the current track.
 - Download a book for offline listening. Manage downloads from My books or Settings, pause or resume transfers, and remove downloaded audio while keeping the book and listening position.
+- Browse My books and search your enabled online libraries through Android Auto. Car playback and phone media notifications show the same book cover and author as the phone player.
 
 Library support depends on the website's available service and the build's configuration; adding an address does not make every website compatible. A book is shown as available offline only after all tracks supplied by that library are saved.
 
@@ -22,11 +27,14 @@ AudioTales also accepts compatible `audiotales://` book links. Some websites sen
 
 ## Planned features
 
-- **Chapters and bookmarks.** Navigate longer books and save moments you want to revisit.
-- **Sleep timer.** Stop playback automatically when winding down.
-- **Listening in the car.** Browse and control playback through Android Auto on supported phones and vehicles.
+- **Embedded chapters and bookmarks.** Navigate chapters within recordings and save moments you want to revisit. Track navigation is already available.
+- **Android Auto voice search.** Find and start a book by voice.
 
-AudioTales requires **Android 8.0 and later**. Device testing is still in progress. Android Auto has its own compatibility requirements and has not yet been verified.
+AudioTales requires **Android 8.0 and later**. Device testing is still in
+progress. Android Auto has its own phone and vehicle requirements. Its
+browsing, typed search and playback controls have passed
+sampled tests with Google's Desktop Head Unit. Broader car compatibility,
+rotary controls and physical headset/Bluetooth testing remain in progress.
 
 ## Reporting a problem
 

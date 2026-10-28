@@ -494,6 +494,17 @@ claim. Packaging checks alone did not detect the original failure.
 
 The first tag-triggered signed build, [v0.2.0](https://github.com/drolevar/audiotales/actions/runs/40661487817), succeeded on 2026-10-28 from commit `46f648b263fa6c8271edeb255eb9411e07c6f8ac`. The downloaded artifact's ZIP digest, file checksums, version/signature provenance and native alignment were independently verified. The exact GitHub-built APK then passed cold launch, sample partner-library registration/book lookup, short streaming and native Pause on API 26 and API 37.2. These checks cover the sampled headless release paths; physical audio and Android Auto acceptance remain separate. The same verified APK is now attached to the [v0.2.0 GitHub Release](https://github.com/drolevar/audiotales/releases/tag/v0.2.0); its downloaded release asset matches the tested SHA-256.
 
+The [v0.2.1 release workflow](https://github.com/drolevar/audiotales/actions/runs/40728137386)
+then built and published commit `6580a3a322fe12b426db142be63734c09124ec13`.
+All four [published assets](https://github.com/drolevar/audiotales/releases/tag/v0.2.1)
+matched the exact workflow artifact after independent download, including its
+ZIP digest. Actual APK signature, version `0.2.1`/code `2001`, source provenance
+and native alignment were reverified. The exact GitHub APK passed in-place
+installation, cold launch, brief playback/Pause and correct native notification
+artwork on the physical API 28 phone. It retained the existing application UID
+and three saved books. The earlier signed candidate supplies the projected DHU
+evidence below; the final GitHub APK was not retested through DHU.
+
 ### Shared book artwork verification — 2026-10-28
 
 Debug and minified release builds passed, with zero lint errors, 13 warnings
