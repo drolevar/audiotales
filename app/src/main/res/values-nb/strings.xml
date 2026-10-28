@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Innstillinger</string>
+    <string name="back">Tilbake</string>
+    <string name="my_books">Bøkene mine</string>
+    <plurals name="library_book_count">
+        <item quantity="one">%1$d bok</item>
+        <item quantity="other">%1$d bøker</item>
+    </plurals>
+    <string name="library_loading">Åpner biblioteket ditt…</string>
+    <string name="library_empty_title">Ingen bøker ennå</string>
+    <string name="library_empty_description">Finn og lagre en bok i Utforsk for å begynne å lytte.</string>
+    <string name="cancel">Avbryt</string>
+    <string name="remove">Fjern</string>
+    <string name="online_book_network_error">Kunne ikke nå leverandøren. Sjekk tilkoblingen og prøv igjen.</string>
+    <string name="online_book_response_error">Leverandøren returnerte ikke boken. Prøv igjen senere.</string>
+    <string name="online_book_format_error">Kunne ikke lese boksiden eller sporlisten. Boken er ikke lagt til.</string>
+    <string name="online_book_empty_error">Leverandøren returnerte ingen lydspor. Boken er ikke lagt til.</string>
+    <string name="online_book_unsupported_error">Denne boken bruker en lydkilde eller et format som AudioTales ikke støtter ennå.</string>
+    <string name="online_book_size_error">Leverandøren returnerte mer data enn denne versjonen kan håndtere.</string>
+    <string name="online_book_save_error">Kunne ikke lagre boken. Prøv igjen.</string>
+    <string name="library_error_title">Kunne ikke åpne biblioteket ditt</string>
+    <string name="library_error_description">Prøv igjen. Det lagrede biblioteket ditt er ikke tømt.</string>
+    <string name="try_again">Prøv igjen</string>
+    <string name="appearance">Utseende</string>
+    <string name="appearance_description">Velg et utseende som passer for deg.</string>
+    <string name="theme_system">Bruk enhetsinnstillingen</string>
+    <string name="theme_light">Lyst</string>
+    <string name="theme_dark">Mørkt</string>
+    <string name="device_colors">Bruk enhetens farger</string>
+    <string name="device_colors_description">Tilpass til bakgrunnen din. Slå av for å bruke lillafargen til AudioTales.</string>
+    <string name="preference_save_error">Kunne ikke lagre innstillingen din. Prøv igjen.</string>
+    <string name="about_audiotales">Om AudioTales</string>
+    <string name="version_label">Versjon %1$s</string>
+    <string name="about_description">En lydbokspiller for bøkene du er glad i, uansett hvor du lytter.</string>
+    <string name="about_development_status">AudioTales er i tidlig utvikling. Funksjoner og enhetskompatibilitet testes fortsatt.</string>
+    <string name="mit_license">MIT-lisens</string>
+</resources>

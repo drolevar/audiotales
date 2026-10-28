@@ -2,6 +2,8 @@ package io.github.drolevar.audiotales.playback
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.MutableContextWrapper
+import android.content.res.Configuration
 import android.database.DatabaseErrorHandler
 import android.database.sqlite.SQLiteDatabase
 import android.os.Build
@@ -22,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.common.util.concurrent.ListenableFuture
 import io.github.drolevar.audiotales.data.library.LibraryAddition
+import io.github.drolevar.audiotales.R
 import io.github.drolevar.audiotales.data.library.LibraryBook
 import io.github.drolevar.audiotales.data.library.LibraryCollectionEntry
 import io.github.drolevar.audiotales.data.library.LibraryRepository
@@ -37,6 +40,7 @@ import io.github.drolevar.audiotales.data.online.OnlineLibrary
 import java.io.File
 import java.io.IOException
 import java.util.UUID
+import java.util.Locale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +70,33 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 @androidx.annotation.OptIn(UnstableApi::class)
 class CarCatalogueSessionIntegrationTest {
+    @Test
+    fun cachedCarLabelsFollowLanguageWithoutChangingPlaybackOrProviderData() = runBlocking {
+        withFixture { fixture ->
+            fixture.selectBaseline()
+            val baseline = fixture.playerState()
+            fixture.online.nextOffset = 40
+            val results = fixture.search("locale")
+            val moreId = results.last().mediaId
+            val bookId = results.first().mediaId
+            val requests = fixture.online.requests.size
+            for (language in listOf("en", "ru", "uk", "nb")) {
+                onMain { fixture.setLabelLanguage(language) }
+                val books = onMain { fixture.browser.getChildren(LibraryMediaIds.ROOT, 0, 10, null) }.boundedAwait()
+                assertEquals(fixture.labels.getString(R.string.my_books), books.value!!.single().mediaMetadata.title.toString())
+                val folder = onMain { fixture.browser.getItem(moreId) }.boundedAwait().value!!
+                assertEquals(fixture.labels.getString(R.string.car_catalogue_more_from_library, fixture.online.source.displayName),
+                    folder.mediaMetadata.title.toString())
+                val cached = onMain { fixture.browser.getSearchResult("locale", 0, 100, null) }.boundedAwait().value!!
+                assertEquals(folder.mediaMetadata.title, cached.last().mediaMetadata.title)
+                assertEquals("Remote one", onMain { fixture.browser.getItem(bookId) }.boundedAwait().value!!.mediaMetadata.title.toString())
+                assertEquals(baseline, fixture.playerState())
+            }
+            assertEquals(requests, fixture.online.requests.size)
+            assertEquals(0, fixture.library.additions)
+        }
+    }
+
     @Test
     fun canonicalBookMetadataOverridesCallerAndEmbeddedTrackArtwork() = runBlocking {
         withFixture { fixture ->
@@ -281,7 +312,9 @@ class CarCatalogueSessionIntegrationTest {
     private data class PlayerState(val ids: List<String>, val currentId: String?, val position: Long,
         val state: Int, val playWhenReady: Boolean)
 
-    private class Fixture(context: Context) {
+    private class Fixture(private val context: Context) {
+        val labels = MutableContextWrapper(localizedContext(context, "en"))
+        fun setLabelLanguage(language: String) { labels.baseContext = localizedContext(context, language) }
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         val library = MemoryLibrary()
         val online = FakeCatalogue()
@@ -300,7 +333,7 @@ class CarCatalogueSessionIntegrationTest {
             library.seed(baseline, tracks(baseline.id), ListeningProgress(baseline.id, "baseline:1", 4_500, 1))
             progress.start(scope)
             sleep.start(scope)
-            val callback = LibrarySessionCallback(library, scope, "AudioTales", "My books", storage,
+            val callback = LibrarySessionCallback(library, scope, labels, storage,
                 progress, sleep, context.packageName, Process.myUid(), BookRemovalGuard(), online, details)
             session = MediaLibrarySession.Builder(context, player, callback)
                 .setId("car-search-test-${UUID.randomUUID()}").build()
@@ -410,6 +443,7 @@ class CarCatalogueSessionIntegrationTest {
     }
 
     private class FakeCatalogue : OnlineCatalogue {
+        var nextOffset: Int? = null
         val source = OnlineLibrary("online-source", "https://library.invalid/", "Online library", LibraryProtocol.PARTNER)
         val sources = MutableStateFlow(listOf(source))
         val requests = mutableListOf<Pair<String, String>>()
@@ -420,7 +454,7 @@ class CarCatalogueSessionIntegrationTest {
             return CataloguePage(if (query == "none") emptyList() else listOf(
                 CatalogueBook(source.id, "1", "Author - Remote one", "Author", coverUrl = null, sourceUrl = null),
                 CatalogueBook(source.id, "2", "Remote two", null, coverUrl = null, sourceUrl = null),
-            ), null)
+            ), nextOffset)
         }
         override suspend fun addLibrary(input: String): OnlineLibrary = error("Not used")
         override suspend fun saveBook(libraryId: String, remoteId: String): LibraryAddition = error("Search must not save")
@@ -460,6 +494,10 @@ class CarCatalogueSessionIntegrationTest {
     }
 
     companion object {
+        private fun localizedContext(context: Context, language: String): Context =
+            context.createConfigurationContext(Configuration(context.resources.configuration).apply {
+                setLocale(Locale.forLanguageTag(language))
+            })
         private fun tracks(bookId: String): List<LibraryTrack> = (0..1).map {
             LibraryTrack("$bookId:$it", bookId, "Chapter $it", "https://media.invalid/$bookId/$it.mp3", it, 60_000)
         }

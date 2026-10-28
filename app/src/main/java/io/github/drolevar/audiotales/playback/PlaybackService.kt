@@ -14,7 +14,6 @@ import androidx.media3.session.MediaSession
 import coil3.SingletonImageLoader
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.drolevar.audiotales.MainActivity
-import io.github.drolevar.audiotales.R
 import io.github.drolevar.audiotales.data.library.LibraryRepository
 import io.github.drolevar.audiotales.data.online.OnlineCatalogue
 import io.github.drolevar.audiotales.data.online.OnlineBookDetailsSource
@@ -83,7 +82,7 @@ class PlaybackService : MediaLibraryService() {
             this,
             player,
             LibrarySessionCallback(
-                library, libraryScope, getString(R.string.media_library_title), getString(R.string.my_books), storage, progress,
+                library, libraryScope, this, storage, progress,
                 sleepTimer, packageName, Process.myUid(), bookRemovalGuard, onlineCatalogue, onlineDetails,
             ),
         )

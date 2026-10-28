@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_title">Завантаження</string>
+    <string name="downloads_loading">Перевірка завантажень…</string>
+    <string name="downloads_empty_title">Слухайте будь-де</string>
+    <string name="downloads_empty_description">Завантажень ще немає. Виберіть книгу в розділі «Мої книги» та натисніть «Завантажити», щоб слухати офлайн.</string>
+    <string name="downloads_my_books">Перейти до «Моїх книг»</string>
+    <string name="downloads_load_failed">Не вдалося відобразити завантаження. Спробуйте ще раз.</string>
+    <string name="downloads_request_failed">Не вдалося виконати запит на завантаження. Спробуйте ще раз.</string>
+    <string name="downloads_sources_failed">Не вдалося оновити джерела аудіо. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="downloads_offline">Доступно офлайн</string>
+    <string name="downloads_downloading">Завантажується</string>
+    <string name="downloads_queued">У черзі</string>
+    <string name="downloads_paused">Призупинено</string>
+    <string name="downloads_failed">Помилка завантаження</string>
+    <string name="downloads_removing">Видалення завантажень…</string>
+    <string name="downloads_partial">Частково завантажено</string>
+    <string name="downloads_not_downloaded">Не завантажено</string>
+    <string name="downloads_percent">%1$s · %2$d%%</string>
+    <string name="downloads_failed_count">Помилок: %1$d</string>
+    <string name="downloads_status_failures">%1$s · %2$s</string>
+    <plurals name="downloads_tracks_saved">
+        <item quantity="one">Збережено %1$d із %2$d доріжки</item>
+        <item quantity="few">Збережено %1$d із %2$d доріжок</item>
+        <item quantity="many">Збережено %1$d із %2$d доріжок</item>
+        <item quantity="other">Збережено %1$d із %2$d доріжки</item>
+    </plurals>
+    <string name="downloads_play">Відтворити завантажену книгу: %1$s</string>
+    <string name="downloads_pause">Призупинити завантаження книги %1$s</string>
+    <string name="downloads_resume">Продовжити завантаження книги %1$s</string>
+    <string name="downloads_retry">Повторити завантаження книги %1$s</string>
+    <string name="downloads_working">Оновлення завантажень книги %1$s…</string>
+    <string name="downloads_removing_book">Видалення завантажень книги %1$s…</string>
+    <string name="downloads_options">Параметри завантажень книги %1$s</string>
+    <string name="downloads_details">Відомості про завантаження</string>
+    <string name="downloads_remove">Видалити завантаження</string>
+    <string name="downloads_remove_title">Видалити аудіо?</string>
+    <string name="downloads_remove_message">Видалити завантажене аудіо книги «%1$s»? Книга та історія прослуховування залишаться в «Моїх книгах».</string>
+    <string name="downloads_cancel">Скасувати</string>
+    <string name="downloads_close">Закрити</string>
+    <string name="downloads_track_bytes">%1$s із %2$s</string>
+    <string name="downloads_track_saved_bytes">Завантажено %1$s · загальний розмір невідомий</string>
+    <string name="downloads_reconnect">Повторно підключити програвач</string>
+    <string name="downloads_connection_failed">Не вдалося підключитися до програвача.</string>
+</resources>

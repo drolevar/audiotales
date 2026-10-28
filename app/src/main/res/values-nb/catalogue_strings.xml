@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalogue_browse">Utforsk</string>
+    <string name="catalogue_add_library">Legg til bibliotek</string>
+    <string name="catalogue_choose_library">Velg bibliotek</string>
+    <string name="catalogue_base_url">Bibliotekets basisadresse</string>
+    <string name="catalogue_add_library_help">Skriv inn HTTPS-adressen til et kompatibelt nettbibliotek, for eksempel https://librivox.org. AudioTales sjekker katalogen før biblioteket lagres.</string>
+    <string name="catalogue_no_libraries">Nettbibliotekene dine</string>
+    <string name="catalogue_no_libraries_help">Legg til et kompatibelt bibliotek for å utforske bøkene og søke i katalogen.</string>
+    <string name="catalogue_search_hint">Bøker, forfattere…</string>
+    <string name="catalogue_search">Søk</string>
+    <string name="catalogue_loading">Laster katalog…</string>
+    <string name="catalogue_checking">Sjekker bibliotek…</string>
+    <string name="catalogue_empty">Fant ingen bøker</string>
+    <string name="catalogue_empty_help">Prøv et annet søk eller bibliotek.</string>
+    <string name="catalogue_load_more">Last flere</string>
+    <plurals name="catalogue_shown">
+        <item quantity="one">%1$d vist</item>
+        <item quantity="other">%1$d vist</item>
+    </plurals>
+    <string name="catalogue_results_for">Resultater for «%1$s»</string>
+    <string name="catalogue_invalid_link">Skriv inn en gyldig HTTPS-adresse til et bibliotek eller en støttet lenke til en bokside.</string>
+    <string name="catalogue_access_error">Dette biblioteket krever tilgang som ikke er konfigurert i denne appen. Prøv et annet bibliotek.</string>
+    <string name="catalogue_unsupported_library">Denne adressen har ingen støttet lydbokkatalog.</string>
+    <string name="catalogue_library_error">Kunne ikke åpne nettbibliotekene dine. Prøv igjen.</string>
+    <string name="catalogue_response_error">Kunne ikke lese denne katalogen. Biblioteket er kanskje ikke kompatibelt, eller tjenesten kan være midlertidig utilgjengelig.</string>
+    <string name="catalogue_query_error">Søket kan inneholde opptil 300 tegn. Forkort søket og prøv igjen.</string>
+    <string name="catalogue_options">Valg for Utforsk</string>
+    <string name="catalogue_manage_libraries">Administrer biblioteker</string>
+    <string name="catalogue_choose_libraries">Velg biblioteker</string>
+    <string name="catalogue_choose_libraries_help">Velg nettbibliotekene som skal være med i Utforsk.</string>
+    <string name="catalogue_libraries_count">Biblioteker · %1$d</string>
+    <string name="catalogue_done">Ferdig</string>
+    <string name="catalogue_up">Tilbake</string>
+    <string name="catalogue_library_order">Standard</string>
+    <string name="catalogue_sort_title">Tittel</string>
+    <string name="catalogue_sort_author">Forfatter</string>
+    <string name="catalogue_sort_shown">Sorter viste bøker</string>
+    <string name="catalogue_all_languages">Alle språk</string>
+    <string name="catalogue_language_shown">Språk i viste resultater</string>
+    <string name="catalogue_no_language_results">Ingen bøker på %1$s i disse resultatene</string>
+    <string name="catalogue_language_help">Last flere resultater eller velg et annet språk.</string>
+    <string name="catalogue_your_libraries">Bibliotekene dine</string>
+    <plurals name="catalogue_selected">
+        <item quantity="one">%1$d valgt</item>
+        <item quantity="other">%1$d valgt</item>
+    </plurals>
+    <string name="catalogue_library_removed">Biblioteket er ikke lenger tilgjengelig</string>
+    <string name="catalogue_include_library">Ta med %1$s i Utforsk</string>
+    <string name="catalogue_browse_library">Utforsk %1$s</string>
+    <string name="catalogue_library_options">Valg for %1$s</string>
+    <string name="catalogue_rename">Gi nytt navn</string>
+    <string name="catalogue_share">Del</string>
+    <string name="catalogue_remove">Fjern</string>
+    <string name="catalogue_rename_library">Gi biblioteket nytt navn</string>
+    <string name="catalogue_library_name">Biblioteknavn</string>
+    <string name="catalogue_remove_library">Fjern bibliotek?</string>
+    <string name="catalogue_remove_library_help">Dette fjerner biblioteket fra Utforsk. Lagrede bøker, nedlastinger og lyttehistorikk beholdes.</string>
+    <string name="catalogue_manage_help">Velg biblioteker som skal være med i Utforsk. Trykk på et biblioteknavn for å utforske katalogen.</string>
+</resources>

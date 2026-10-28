@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_title">Зараз відтворюється</string>
+    <string name="player_listen">Слухати</string>
+    <string name="player_connecting">Підключення до програвача…</string>
+    <string name="player_connection_failed">Не вдалося підключитися до програвача.</string>
+    <string name="player_book_unavailable">Не вдалося відкрити цю книгу.</string>
+    <plurals name="player_chapter_count">
+        <item quantity="one">%1$d доріжка</item>
+        <item quantity="few">%1$d доріжки</item>
+        <item quantity="many">%1$d доріжок</item>
+        <item quantity="other">%1$d доріжки</item>
+    </plurals>
+    <string name="player_playback_error">Відтворення зупинено. Перевірте з’єднання або завантажте книгу й спробуйте ще раз.</string>
+    <string name="player_source_refreshing">Оновлення джерел аудіо…</string>
+    <string name="player_action_working">Оновлення запиту…</string>
+    <string name="player_source_refresh_failed">Не вдалося оновити джерела аудіо. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="player_retry_failed">Не вдалося відновити відтворення. Повторно підключіть програвач і спробуйте ще раз.</string>
+    <plurals name="player_download_queued">
+        <item quantity="one">У черзі %1$d доріжка</item>
+        <item quantity="few">У черзі %1$d доріжки</item>
+        <item quantity="many">У черзі %1$d доріжок</item>
+        <item quantity="other">У черзі %1$d доріжки</item>
+    </plurals>
+    <plurals name="player_download_running">
+        <item quantity="one">Завантажується %1$d доріжка</item>
+        <item quantity="few">Завантажуються %1$d доріжки</item>
+        <item quantity="many">Завантажується %1$d доріжок</item>
+        <item quantity="other">Завантажується %1$d доріжки</item>
+    </plurals>
+    <plurals name="player_download_paused">
+        <item quantity="one">Завантаження %1$d доріжки призупинено</item>
+        <item quantity="few">Завантаження %1$d доріжок призупинено</item>
+        <item quantity="many">Завантаження %1$d доріжок призупинено</item>
+        <item quantity="other">Завантаження %1$d доріжки призупинено</item>
+    </plurals>
+    <string name="player_position_error">Не вдалося зберегти позицію прослуховування.</string>
+    <string name="player_download">Завантажити книгу</string>
+    <string name="player_retry_download">Повторити завантаження</string>
+    <string name="player_resume_download">Продовжити завантаження</string>
+    <string name="player_pause_download">Призупинити завантаження</string>
+    <string name="player_remove_download">Видалити завантаження</string>
+    <string name="player_download_ready">Доступно офлайн</string>
+    <string name="player_download_checking">Перевірка завантажень…</string>
+    <plurals name="player_download_status">
+        <item quantity="one">Збережено %1$d із %2$d доріжки</item>
+        <item quantity="few">Збережено %1$d із %2$d доріжок</item>
+        <item quantity="many">Збережено %1$d із %2$d доріжок</item>
+        <item quantity="other">Збережено %1$d із %2$d доріжки</item>
+    </plurals>
+    <string name="player_download_failed">Не вдалося завантажити деякі доріжки.</string>
+    <string name="player_download_removing">Видалення завантаженого аудіо…</string>
+    <string name="player_download_action_failed">Не вдалося виконати запит на завантаження. Спробуйте ще раз.</string>
+    <string name="player_streaming">Аудіо онлайн</string>
+    <string name="player_open">Відкрити програвач</string>
+    <string name="download_notification_channel">Завантаження аудіокниг</string>
+    <string name="download_notification_title">Завантаження аудіокниг</string>
+    <string name="download_notification_running">Збереження аудіо для прослуховування офлайн</string>
+    <string name="download_notification_waiting">Очікування з’єднання з мережею</string>
+    <string name="player_close">Закрити програвач</string>
+    <string name="player_options">Параметри програвача</string>
+    <string name="player_loading">Відкриття книги…</string>
+    <string name="player_information">Відомості про книгу</string>
+    <string name="player_manage_downloads">Керувати завантаженнями</string>
+    <string name="player_share">Поділитися</string>
+    <string name="player_remove_book">Видалити книгу</string>
+    <string name="player_remove_book_title">Видалити книгу?</string>
+    <string name="player_remove_book_description">Книгу буде видалено з «Моїх книг» разом із завантаженим аудіо, прогресом прослуховування та закладками. Цю дію неможливо скасувати.</string>
+    <string name="player_remove_downloads_title">Видалити аудіо?</string>
+    <string name="player_remove_downloads_description">Буде видалено лише завантажене аудіо. Книга, прогрес прослуховування та закладки залишаться в «Моїх книгах». Ви зможете слухати її онлайн або завантажити знову.</string>
+    <string name="player_removing_book">Видалення книги…</string>
+    <string name="player_remove_book_failed">Не вдалося видалити книгу. Спробуйте ще раз.</string>
+    <string name="player_sheet_close">Закрити</string>
+    <string name="player_no_description">Опису немає.</string>
+    <string name="player_open_source">Відкрити сайт джерела</string>
+    <string name="player_metadata_refreshing">Завантаження відомостей про книгу…</string>
+    <string name="player_metadata_failed">Не вдалося оновити відомості про книгу. Збережені відомості залишаються доступними.</string>
+    <string name="player_external_failed">Не вдалося відкрити це посилання або поділитися ним.</string>
+    <string name="player_download_check_failed">Не вдалося перевірити завантаження. Спробуйте ще раз.</string>
+    <string name="player_current_track">Доріжка %1$d із %2$d</string>
+    <string name="player_speed">Швидкість</string>
+    <string name="player_sleep_timer">Таймер сну</string>
+    <string name="player_tracks">Доріжки</string>
+    <string name="player_downloaded">Завантажено</string>
+    <string name="player_downloads">Завантаження</string>
+    <string name="player_reconnect">Повторно підключити програвач</string>
+    <string name="player_current">Поточна доріжка</string>
+    <plurals name="player_timer_minutes">
+        <item quantity="one">%1$d хвилина</item>
+        <item quantity="few">%1$d хвилини</item>
+        <item quantity="many">%1$d хвилин</item>
+        <item quantity="other">%1$d хвилини</item>
+    </plurals>
+    <string name="player_timer_end">До кінця доріжки</string>
+    <string name="player_timer_end_active">Таймер сну: до кінця доріжки</string>
+    <string name="player_timer_remaining">Таймер сну: залишилося %1$s</string>
+    <string name="player_timer_off">Таймер сну вимкнено.</string>
+    <string name="player_timer_cancel">Скасувати таймер</string>
+    <string name="player_track_queued">У черзі</string>
+    <string name="player_track_downloading">Завантажується</string>
+    <string name="player_track_paused">Призупинено</string>
+    <string name="player_track_failed">Помилка завантаження</string>
+    <string name="player_track_not_downloaded">Не завантажено</string>
+    <string name="player_command_failed">Не вдалося налаштувати таймер сну. Відкрийте «Таймер сну» та спробуйте ще раз.</string>
+    <string name="player_dismiss_error">Закрити</string>
+</resources>

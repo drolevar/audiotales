@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="incoming_register_title">Додати бібліотеку?</string>
+    <string name="incoming_register_message">Ця книга з бібліотеки %1$s, яку ще не додано для пошуку. Додайте її, щоб перевірити сумісність і відкрити відомості про книгу. Книгу не буде збережено або відтворено автоматично.</string>
+    <string name="incoming_register">Додати й відкрити</string>
+    <string name="incoming_cancel">Скасувати</string>
+    <string name="incoming_close">Закрити</string>
+    <string name="incoming_retry">Повторити</string>
+    <string name="incoming_opening">Відкриття книги</string>
+    <string name="incoming_loading">Перевірка посилання на книгу…</string>
+    <string name="incoming_error_title">Не вдалося відкрити посилання на книгу</string>
+    <string name="incoming_invalid">Надішліть одне підтримуване HTTPS-посилання на книгу або посилання AudioTales. Це посилання недійсне або не підтримується.</string>
+    <string name="incoming_unsupported">Бібліотека не надала сумісних відомостей про книгу. Перевірте посилання або спробуйте ще раз.</string>
+    <string name="incoming_network">Не вдалося з’єднатися з бібліотекою або вона повернула помилку. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="incoming_not_configured">У цій версії застосунку не налаштовано доступ до бібліотеки.</string>
+</resources>

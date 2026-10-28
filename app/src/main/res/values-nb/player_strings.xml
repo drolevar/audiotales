@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_title">Spilles nå</string>
+    <string name="player_listen">Lytt</string>
+    <string name="player_connecting">Kobler til spilleren…</string>
+    <string name="player_connection_failed">Kunne ikke koble til spilleren.</string>
+    <string name="player_book_unavailable">Kunne ikke åpne denne boken.</string>
+    <plurals name="player_chapter_count">
+        <item quantity="one">%1$d spor</item>
+        <item quantity="other">%1$d spor</item>
+    </plurals>
+    <string name="player_playback_error">Avspillingen stoppet. Sjekk tilkoblingen eller last ned boken, og prøv igjen.</string>
+    <string name="player_source_refreshing">Oppdaterer lydkilder…</string>
+    <string name="player_action_working">Oppdaterer forespørselen…</string>
+    <string name="player_source_refresh_failed">Kunne ikke oppdatere lydkildene. Sjekk tilkoblingen og prøv igjen.</string>
+    <string name="player_retry_failed">Kunne ikke starte avspillingen på nytt. Koble til spilleren igjen og prøv på nytt.</string>
+    <plurals name="player_download_queued">
+        <item quantity="one">%1$d spor i kø</item>
+        <item quantity="other">%1$d spor i kø</item>
+    </plurals>
+    <plurals name="player_download_running">
+        <item quantity="one">Laster ned %1$d spor</item>
+        <item quantity="other">Laster ned %1$d spor</item>
+    </plurals>
+    <plurals name="player_download_paused">
+        <item quantity="one">Nedlasting av %1$d spor på pause</item>
+        <item quantity="other">Nedlasting av %1$d spor på pause</item>
+    </plurals>
+    <string name="player_position_error">Kunne ikke lagre lytteposisjonen din.</string>
+    <string name="player_download">Last ned bok</string>
+    <string name="player_retry_download">Prøv nedlastinger igjen</string>
+    <string name="player_resume_download">Fortsett nedlastinger</string>
+    <string name="player_pause_download">Sett nedlastinger på pause</string>
+    <string name="player_remove_download">Fjern nedlastinger</string>
+    <string name="player_download_ready">Tilgjengelig uten nett</string>
+    <string name="player_download_checking">Sjekker nedlastinger…</string>
+    <plurals name="player_download_status">
+        <item quantity="one">%1$d av %2$d spor lagret</item>
+        <item quantity="other">%1$d av %2$d spor lagret</item>
+    </plurals>
+    <string name="player_download_failed">Kunne ikke laste ned enkelte spor.</string>
+    <string name="player_download_removing">Fjerner nedlastet lyd…</string>
+    <string name="player_download_action_failed">Kunne ikke fullføre nedlastingsforespørselen. Prøv igjen.</string>
+    <string name="player_streaming">Lyd fra nettet</string>
+    <string name="player_open">Åpne spiller</string>
+    <string name="download_notification_channel">Lydboknedlastinger</string>
+    <string name="download_notification_title">Laster ned lydbøker</string>
+    <string name="download_notification_running">Lagrer lyd for lytting uten nett</string>
+    <string name="download_notification_waiting">Venter på nettverkstilkobling</string>
+    <string name="player_close">Lukk spiller</string>
+    <string name="player_options">Spillervalg</string>
+    <string name="player_loading">Åpner bok…</string>
+    <string name="player_information">Bokinformasjon</string>
+    <string name="player_manage_downloads">Administrer nedlastinger</string>
+    <string name="player_share">Del</string>
+    <string name="player_remove_book">Fjern bok</string>
+    <string name="player_remove_book_title">Fjern bok?</string>
+    <string name="player_remove_book_description">Dette fjerner boken fra Bøkene mine, den nedlastede lyden, lytteposisjonen og bokmerkene. Dette kan ikke angres.</string>
+    <string name="player_remove_downloads_title">Fjern lyd?</string>
+    <string name="player_remove_downloads_description">Bare nedlastet lyd fjernes. Boken, lytteposisjonen og bokmerkene blir værende i Bøkene mine. Du kan strømme eller laste ned boken igjen.</string>
+    <string name="player_removing_book">Fjerner bok…</string>
+    <string name="player_remove_book_failed">Kunne ikke fjerne boken. Prøv igjen.</string>
+    <string name="player_sheet_close">Lukk</string>
+    <string name="player_no_description">Ingen beskrivelse er tilgjengelig.</string>
+    <string name="player_open_source">Åpne kildens nettsted</string>
+    <string name="player_metadata_refreshing">Laster bokinformasjon…</string>
+    <string name="player_metadata_failed">Kunne ikke oppdatere bokinformasjonen. Lagret informasjon er fortsatt tilgjengelig.</string>
+    <string name="player_external_failed">Kunne ikke åpne eller dele denne lenken.</string>
+    <string name="player_download_check_failed">Kunne ikke sjekke nedlastinger. Prøv igjen.</string>
+    <string name="player_current_track">Spor %1$d av %2$d</string>
+    <string name="player_speed">Hastighet</string>
+    <string name="player_sleep_timer">Innsovningstimer</string>
+    <string name="player_tracks">Spor</string>
+    <string name="player_downloaded">Lastet ned</string>
+    <string name="player_downloads">Nedlastinger</string>
+    <string name="player_reconnect">Koble til spilleren igjen</string>
+    <string name="player_current">Gjeldende spor</string>
+    <plurals name="player_timer_minutes">
+        <item quantity="one">%1$d minutt</item>
+        <item quantity="other">%1$d minutter</item>
+    </plurals>
+    <string name="player_timer_end">Slutten av sporet</string>
+    <string name="player_timer_end_active">Innsovningstimer: slutten av sporet</string>
+    <string name="player_timer_remaining">Innsovningstimer: %1$s igjen</string>
+    <string name="player_timer_off">Innsovningstimeren er av.</string>
+    <string name="player_timer_cancel">Avbryt timer</string>
+    <string name="player_track_queued">I kø</string>
+    <string name="player_track_downloading">Laster ned</string>
+    <string name="player_track_paused">Satt på pause</string>
+    <string name="player_track_failed">Nedlasting mislyktes</string>
+    <string name="player_track_not_downloaded">Ikke lastet ned</string>
+    <string name="player_command_failed">Kunne ikke oppdatere innsovningstimeren. Åpne Innsovningstimer og prøv igjen.</string>
+    <string name="player_dismiss_error">Lukk</string>
+</resources>

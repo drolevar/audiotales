@@ -316,3 +316,21 @@ Cached artwork remains subject to Coil cache availability; this does not
 promise a permanent offline cover store. Keep native host layout and controls.
 Car browse/search thumbnail transport is separate from shared Now playing
 artwork, because legacy hosts can load those images through different APIs.
+
+## 25. Interface languages — accepted 2026-10-28
+
+Add Russian (`ru`), Ukrainian (`uk`) and Norwegian Bokmål (`nb`) translations
+of app-owned interface text, retaining English as the default fallback. Use
+Android string and quantity resources, including accessibility descriptions,
+download notifications and app-owned Android Auto labels. Preserve library
+metadata, listener-defined library names, book/track identities and AudioTales
+branding. Translation must preserve the distinction between deleting a book
+and all its history, and removing only its downloaded audio.
+
+Implementation choice: use AGP's generated locale configuration and restrict
+packaged language resources to these four supported interface languages.
+Android 13+ exposes its standard per-app language setting; older versions
+follow the device language. This slice adds no custom language picker or
+AppCompat dependency. Resolve car navigation labels from the current service
+resources rather than caching English text; locale changes must not rebuild
+the playback queue or refetch provider records.

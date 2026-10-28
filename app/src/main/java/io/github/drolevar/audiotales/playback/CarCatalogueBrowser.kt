@@ -23,7 +23,14 @@ import kotlinx.coroutines.withTimeoutOrNull
 internal sealed interface CarCatalogueItem {
     val mediaId: String
     data class Book(override val mediaId: String, val book: CatalogueBook) : CarCatalogueItem
-    data class Folder(override val mediaId: String, val title: String) : CarCatalogueItem
+    data class Folder(override val mediaId: String, val label: CarCatalogueLabel) : CarCatalogueItem
+}
+
+/** Cache meaning and library names; resolve app-owned wording in the host's current locale. */
+internal sealed interface CarCatalogueLabel {
+    data class Retry(val libraryName: String) : CarCatalogueLabel
+    data class MoreFrom(val libraryName: String) : CarCatalogueLabel
+    data object MoreResults : CarCatalogueLabel
 }
 
 /**
@@ -53,7 +60,7 @@ internal class CarCatalogueBrowser(private val catalogue: OnlineCatalogue) {
         }
         if (pages.all { it.second == null }) throw IOException("All selected catalogues failed")
         val items = pages.flatMap { (source, page) ->
-            if (page == null) listOf(session.folder("Retry ${source.displayName}", PageRequest(source, 0)))
+            if (page == null) listOf(session.folder(CarCatalogueLabel.Retry(source.displayName), PageRequest(source, 0)))
             else pageItems(session, source, 0, page)
         }
         val result = present(session, items)
@@ -163,14 +170,14 @@ internal class CarCatalogueBrowser(private val catalogue: OnlineCatalogue) {
             }
         }
         page.nextOffset?.takeIf { it > offset }?.let { next ->
-            items.add(session.folder("More from ${source.displayName}", PageRequest(source, next)))
+            items.add(session.folder(CarCatalogueLabel.MoreFrom(source.displayName), PageRequest(source, next)))
         }
         return items
     }
 
     private fun present(session: SearchSession, items: List<CarCatalogueItem>): List<CarCatalogueItem> =
         if (items.size <= MAX_CHILDREN) items
-        else items.take(MAX_CHILDREN - 1) + session.folder("More results", CachedItems(items.drop(MAX_CHILDREN - 1)))
+        else items.take(MAX_CHILDREN - 1) + session.folder(CarCatalogueLabel.MoreResults, CachedItems(items.drop(MAX_CHILDREN - 1)))
 
     private fun find(mediaId: String): Pair<SearchSession, Node>? {
         expireOldSessions()
@@ -208,8 +215,8 @@ internal class CarCatalogueBrowser(private val catalogue: OnlineCatalogue) {
             if (nodes.size >= MAX_NODES_PER_SESSION) throw CacheCapacityException()
             nodes[node.item.mediaId] = node
         }
-        fun folder(title: String, request: FolderRequest): CarCatalogueItem.Folder =
-            CarCatalogueItem.Folder(newId(), title).also { register(Node(it, request)) }
+        fun folder(label: CarCatalogueLabel, request: FolderRequest): CarCatalogueItem.Folder =
+            CarCatalogueItem.Folder(newId(), label).also { register(Node(it, request)) }
     }
     private class CacheCapacityException : IOException("Catalogue cache is full; refine or restart the search")
     private companion object {

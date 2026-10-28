@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="book_details_title">Bokdetaljer</string>
+    <string name="book_details_up">Naviger opp</string>
+    <string name="book_details_options">Bokvalg</string>
+    <string name="book_details_save">Lagre i Bøkene mine</string>
+    <string name="book_details_refresh">Oppdater detaljer</string>
+    <string name="book_details_share">Del bok</string>
+    <string name="book_details_loading">Laster bokdetaljer…</string>
+    <string name="book_details_load_failed">Kunne ikke laste denne boken. Prøv igjen.</string>
+    <string name="book_details_saved">✓ I Bøkene mine</string>
+    <string name="book_details_unsaved">Ikke lagret i Bøkene mine</string>
+    <string name="book_details_listen">Lytt</string>
+    <string name="book_details_resume">Fortsett</string>
+    <string name="book_details_actions_save">Lytt og Last ned lagrer også denne boken i Bøkene mine.</string>
+    <string name="book_details_track_saves">Avspilling av et spor lagrer også denne boken i Bøkene mine.</string>
+    <string name="book_details_connecting">Kobler til spilleren…</string>
+    <plurals name="book_details_offline">
+        <item quantity="one">Tilgjengelig uten nett · %1$d av %2$d spor lagret</item>
+        <item quantity="other">Tilgjengelig uten nett · %1$d av %2$d spor lagret</item>
+    </plurals>
+    <plurals name="book_details_download_count">
+        <item quantity="one">%1$d av %2$d spor lagret for lytting uten nett</item>
+        <item quantity="other">%1$d av %2$d spor lagret for lytting uten nett</item>
+    </plurals>
+    <string name="book_details_save_failed">Kunne ikke lagre denne boken. Prøv igjen.</string>
+    <string name="book_details_play_failed">Kunne ikke starte avspillingen. Trykk på Lytt igjen.</string>
+    <string name="book_details_download_failed">Kunne ikke oppdatere nedlastinger. Sjekk tilkoblingen og prøv igjen.</string>
+    <string name="book_details_tracks">Spor</string>
+    <string name="book_details_audio_loading">Laster lyd…</string>
+    <string name="book_details_audio_failed">Kunne ikke laste lyd.</string>
+    <string name="book_details_audio_unresolved">Lyd er ikke lastet.</string>
+    <string name="book_details_retry_audio">Prøv å laste lyd igjen</string>
+    <plurals name="book_details_track_count">
+        <item quantity="one">%d spor</item>
+        <item quantity="other">%d spor</item>
+    </plurals>
+    <string name="book_details_description">Beskrivelse</string>
+    <string name="book_details_no_description">Ingen beskrivelse tilgjengelig.</string>
+    <string name="book_details_refresh_failed">Kunne ikke oppdatere detaljene. Prøv igjen når du er tilkoblet.</string>
+    <string name="book_details_current_position">Lagret lytteposisjon %1$s</string>
+    <string name="book_details_downloading">Laster ned</string>
+    <string name="book_details_checking_downloads">Sjekker nedlastinger…</string>
+    <string name="book_details_saved_refresh_failed">Kunne ikke oppdatere informasjonen om den lagrede boken.</string>
+    <string name="book_details_connection_failed">Kunne ikke koble til spilleren.</string>
+    <string name="book_details_paused">Satt på pause</string>
+    <string name="book_details_download_status_failed">Nedlasting mislyktes</string>
+    <string name="book_details_queued">I kø</string>
+</resources>

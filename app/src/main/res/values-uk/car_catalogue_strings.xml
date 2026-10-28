@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="car_catalogue_retry_library">Повторити для %1$s</string>
+    <string name="car_catalogue_more_from_library">Більше з %1$s</string>
+    <string name="car_catalogue_more_results">Більше результатів</string>
+</resources>

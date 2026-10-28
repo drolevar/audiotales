@@ -168,7 +168,7 @@ internal fun BookDetailsScreen(
                         Text(stringResource(when {
                             !state.downloadsReady && state.downloadsFailed -> R.string.collection_retry_action
                             !state.downloadsReady -> R.string.book_details_checking_downloads
-                            state.download.complete -> R.string.collection_downloaded
+                            state.download.complete -> R.string.player_downloaded
                             state.download.active -> R.string.collection_pause_action
                             state.download.hasFailures -> R.string.collection_retry_action
                             state.download.hasDownloads -> R.string.collection_resume_action
@@ -235,7 +235,7 @@ internal fun BookDetailsScreen(
                         val details = listOfNotNull(
                             track.durationMs?.takeIf { it > 0 }?.let(::durationLabel),
                             state.progress?.takeIf { it.trackId == track.id }?.let { stringResource(R.string.book_details_current_position, durationLabel(it.positionMs)) },
-                            status?.let { stringResource(when (it) { DownloadStatus.COMPLETED -> R.string.collection_downloaded; DownloadStatus.PAUSED -> R.string.book_details_paused; DownloadStatus.FAILED -> R.string.book_details_download_status_failed; DownloadStatus.REMOVING -> R.string.collection_removing; DownloadStatus.QUEUED -> R.string.book_details_queued; DownloadStatus.DOWNLOADING -> R.string.book_details_downloading }) },
+                            status?.let { stringResource(when (it) { DownloadStatus.COMPLETED -> R.string.player_downloaded; DownloadStatus.PAUSED -> R.string.book_details_paused; DownloadStatus.FAILED -> R.string.book_details_download_status_failed; DownloadStatus.REMOVING -> R.string.collection_removing; DownloadStatus.QUEUED -> R.string.book_details_queued; DownloadStatus.DOWNLOADING -> R.string.book_details_downloading }) },
                         )
                         Column {
                             if (details.isNotEmpty()) Text(details.joinToString(" · "))

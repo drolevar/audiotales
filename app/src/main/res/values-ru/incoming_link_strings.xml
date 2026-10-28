@@ -1,0 +1,15 @@
+<resources>
+    <string name="incoming_register_title">Добавить библиотеку?</string>
+    <string name="incoming_register_message">Эта книга из библиотеки %1$s, которая не включена в Каталог. Добавьте библиотеку, чтобы проверить совместимость и открыть сведения о книге. Книга не будет сохранена или запущена автоматически.</string>
+    <string name="incoming_register">Добавить и открыть</string>
+    <string name="incoming_cancel">Отмена</string>
+    <string name="incoming_close">Закрыть</string>
+    <string name="incoming_retry">Повторить</string>
+    <string name="incoming_opening">Открываем книгу</string>
+    <string name="incoming_loading">Проверка ссылки на книгу…</string>
+    <string name="incoming_error_title">Не удалось открыть ссылку на книгу</string>
+    <string name="incoming_invalid">Поделитесь одной поддерживаемой HTTPS-ссылкой на книгу или ссылкой AudioTales. Эта ссылка некорректна или не поддерживается.</string>
+    <string name="incoming_unsupported">Библиотека не вернула совместимые сведения о книге. Проверьте ссылку или повторите попытку.</string>
+    <string name="incoming_network">Не удалось связаться с библиотекой или она вернула ошибку. Проверьте подключение и повторите попытку.</string>
+    <string name="incoming_not_configured">Доступ к этой библиотеке не настроен в данной сборке.</string>
+</resources>

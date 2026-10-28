@@ -1,0 +1,4 @@
+<resources>
+    <string name="nav_downloads">Загрузки</string>
+    <string name="nav_downloads_description">Управление книгами для прослушивания без интернета</string>
+</resources>

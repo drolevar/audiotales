@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_title">Nedlastinger</string>
+    <string name="downloads_loading">Sjekker nedlastinger…</string>
+    <string name="downloads_empty_title">Lytt hvor som helst</string>
+    <string name="downloads_empty_description">Ingen nedlastinger ennå. Velg en bok i Bøkene mine og trykk på Last ned for å lytte uten nett.</string>
+    <string name="downloads_my_books">Gå til Bøkene mine</string>
+    <string name="downloads_load_failed">Kunne ikke hente nedlastingene. Prøv igjen.</string>
+    <string name="downloads_request_failed">Kunne ikke fullføre nedlastingsforespørselen. Prøv igjen.</string>
+    <string name="downloads_sources_failed">Kunne ikke oppdatere lydkildene. Sjekk tilkoblingen og prøv igjen.</string>
+    <string name="downloads_offline">Tilgjengelig uten nett</string>
+    <string name="downloads_downloading">Laster ned</string>
+    <string name="downloads_queued">I kø</string>
+    <string name="downloads_paused">Satt på pause</string>
+    <string name="downloads_failed">Nedlasting mislyktes</string>
+    <string name="downloads_removing">Fjerner nedlastinger…</string>
+    <string name="downloads_partial">Delvis lastet ned</string>
+    <string name="downloads_not_downloaded">Ikke lastet ned</string>
+    <string name="downloads_percent">%1$s · %2$d%%</string>
+    <string name="downloads_failed_count">%1$d mislyktes</string>
+    <string name="downloads_status_failures">%1$s · %2$s</string>
+    <plurals name="downloads_tracks_saved">
+        <item quantity="one">%1$d av %2$d spor lagret</item>
+        <item quantity="other">%1$d av %2$d spor lagret</item>
+    </plurals>
+    <string name="downloads_play">Spill av nedlastet bok: %1$s</string>
+    <string name="downloads_pause">Sett nedlastinger for %1$s på pause</string>
+    <string name="downloads_resume">Fortsett nedlastinger for %1$s</string>
+    <string name="downloads_retry">Prøv nedlastinger for %1$s igjen</string>
+    <string name="downloads_working">Oppdaterer nedlastinger for %1$s…</string>
+    <string name="downloads_removing_book">Fjerner nedlastinger for %1$s…</string>
+    <string name="downloads_options">Nedlastingsvalg for %1$s</string>
+    <string name="downloads_details">Nedlastingsdetaljer</string>
+    <string name="downloads_remove">Fjern nedlastinger</string>
+    <string name="downloads_remove_title">Fjern lyd?</string>
+    <string name="downloads_remove_message">Fjern nedlastet lyd for «%1$s»? Boken og lyttehistorikken din blir værende i Bøkene mine.</string>
+    <string name="downloads_cancel">Avbryt</string>
+    <string name="downloads_close">Lukk</string>
+    <string name="downloads_track_bytes">%1$s av %2$s</string>
+    <string name="downloads_track_saved_bytes">%1$s lastet ned · ukjent totalstørrelse</string>
+    <string name="downloads_reconnect">Koble til spilleren igjen</string>
+    <string name="downloads_connection_failed">Kunne ikke koble til spilleren.</string>
+</resources>

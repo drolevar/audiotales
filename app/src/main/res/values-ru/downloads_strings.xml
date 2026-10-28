@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_title">Загрузки</string>
+    <string name="downloads_loading">Проверка загрузок…</string>
+    <string name="downloads_empty_title">Слушайте где угодно</string>
+    <string name="downloads_empty_description">Пока нет загрузок. Выберите книгу в Моих книгах и нажмите «Скачать», чтобы слушать без интернета.</string>
+    <string name="downloads_my_books">Перейти в Мои книги</string>
+    <string name="downloads_load_failed">Не удалось получить список загрузок. Повторите попытку.</string>
+    <string name="downloads_request_failed">Не удалось выполнить запрос на загрузку. Повторите попытку.</string>
+    <string name="downloads_sources_failed">Не удалось обновить источники аудио. Проверьте подключение и повторите попытку.</string>
+    <string name="downloads_offline">Доступно без интернета</string>
+    <string name="downloads_downloading">Загрузка</string>
+    <string name="downloads_queued">В очереди</string>
+    <string name="downloads_paused">Приостановлено</string>
+    <string name="downloads_failed">Ошибка загрузки</string>
+    <string name="downloads_removing">Удаление скачанного аудио…</string>
+    <string name="downloads_partial">Скачано частично</string>
+    <string name="downloads_not_downloaded">Не скачано</string>
+    <string name="downloads_percent">%1$s · %2$d%%</string>
+    <string name="downloads_failed_count">Ошибок: %1$d</string>
+    <string name="downloads_status_failures">%1$s · %2$s</string>
+    <plurals name="downloads_tracks_saved">
+        <item quantity="one">Скачано: %1$d из %2$d трека</item>
+        <item quantity="few">Скачано: %1$d из %2$d треков</item>
+        <item quantity="many">Скачано: %1$d из %2$d треков</item>
+        <item quantity="other">Скачано: %1$d из %2$d трека</item>
+    </plurals>
+    <string name="downloads_play">Слушать скачанную книгу: %1$s</string>
+    <string name="downloads_pause">Приостановить загрузку: %1$s</string>
+    <string name="downloads_resume">Продолжить загрузку: %1$s</string>
+    <string name="downloads_retry">Повторить загрузку: %1$s</string>
+    <string name="downloads_working">Обновление загрузок: %1$s…</string>
+    <string name="downloads_removing_book">Удаление скачанного аудио: %1$s…</string>
+    <string name="downloads_options">Действия с загрузками: %1$s</string>
+    <string name="downloads_details">Сведения о загрузках</string>
+    <string name="downloads_remove">Удалить скачанное аудио</string>
+    <string name="downloads_remove_title">Удалить аудио?</string>
+    <string name="downloads_remove_message">Удалить скачанное аудио книги «%1$s»? Книга и история прослушивания останутся в Моих книгах.</string>
+    <string name="downloads_cancel">Отмена</string>
+    <string name="downloads_close">Закрыть</string>
+    <string name="downloads_track_bytes">%1$s из %2$s</string>
+    <string name="downloads_track_saved_bytes">Скачано %1$s · общий размер неизвестен</string>
+    <string name="downloads_reconnect">Подключить плеер заново</string>
+    <string name="downloads_connection_failed">Не удалось подключиться к плееру.</string>
+</resources>

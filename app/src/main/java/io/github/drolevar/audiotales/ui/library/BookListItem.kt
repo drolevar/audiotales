@@ -161,7 +161,7 @@ private fun collectionStatusText(row: CollectionRow): String {
     val download = row.download
     val downloaded = when {
         download.removing -> stringResource(R.string.collection_removing)
-        download.complete -> stringResource(R.string.collection_downloaded)
+        download.complete -> stringResource(R.string.player_downloaded)
         download.active -> stringResource(R.string.collection_downloading, download.completedTracks, download.totalTracks)
         download.hasFailures -> stringResource(R.string.collection_download_failed, download.completedTracks, download.totalTracks)
         download.pausedTracks > 0 -> stringResource(R.string.collection_paused, download.completedTracks, download.totalTracks)

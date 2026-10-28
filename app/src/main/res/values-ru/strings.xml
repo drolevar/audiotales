@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings">Настройки</string>
+    <string name="back">Назад</string>
+    <string name="my_books">Мои книги</string>
+    <plurals name="library_book_count">
+        <item quantity="one">%1$d книга</item>
+        <item quantity="few">%1$d книги</item>
+        <item quantity="many">%1$d книг</item>
+        <item quantity="other">%1$d книги</item>
+    </plurals>
+    <string name="library_loading">Открываем вашу библиотеку…</string>
+    <string name="library_empty_title">Пока нет книг</string>
+    <string name="library_empty_description">Найдите и сохраните книгу в разделе «Каталог», чтобы начать слушать.</string>
+    <string name="cancel">Отмена</string>
+    <string name="remove">Удалить</string>
+    <string name="online_book_network_error">Не удалось связаться с источником. Проверьте подключение и повторите попытку.</string>
+    <string name="online_book_response_error">Источник не вернул книгу. Повторите попытку позже.</string>
+    <string name="online_book_format_error">Не удалось прочитать страницу книги или список треков. Книга не добавлена.</string>
+    <string name="online_book_empty_error">Источник не вернул аудиотреки. Книга не добавлена.</string>
+    <string name="online_book_unsupported_error">Источник или формат аудио этой книги пока не поддерживается в AudioTales.</string>
+    <string name="online_book_size_error">Источник вернул больше данных, чем может обработать эта версия приложения.</string>
+    <string name="online_book_save_error">Не удалось сохранить книгу. Повторите попытку.</string>
+    <string name="library_error_title">Не удалось открыть вашу библиотеку</string>
+    <string name="library_error_description">Повторите попытку. Сохранённая библиотека не удалена.</string>
+    <string name="try_again">Повторить</string>
+    <string name="appearance">Оформление</string>
+    <string name="appearance_description">Выберите удобное для вас оформление.</string>
+    <string name="theme_system">Как на устройстве</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
+    <string name="device_colors">Цвета устройства</string>
+    <string name="device_colors_description">Цвета из ваших обоев. Отключите, чтобы использовать фиолетовый цвет AudioTales.</string>
+    <string name="preference_save_error">Не удалось сохранить настройку. Повторите попытку.</string>
+    <string name="about_audiotales">Об AudioTales</string>
+    <string name="version_label">Версия %1$s</string>
+    <string name="about_description">Плеер для любимых аудиокниг — где бы вы ни слушали.</string>
+    <string name="about_development_status">AudioTales находится на ранней стадии разработки. Возможности и совместимость с устройствами ещё проверяются.</string>
+    <string name="mit_license">Лицензия MIT</string>
+</resources>

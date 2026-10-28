@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalogue_browse">Каталог</string>
+    <string name="catalogue_add_library">Додати бібліотеку</string>
+    <string name="catalogue_choose_library">Вибрати бібліотеку</string>
+    <string name="catalogue_base_url">Базова URL-адреса бібліотеки</string>
+    <string name="catalogue_add_library_help">Введіть HTTPS-адресу сумісної онлайн-бібліотеки, наприклад https://librivox.org. AudioTales перевірить її каталог перед збереженням.</string>
+    <string name="catalogue_no_libraries">Ваші онлайн-бібліотеки</string>
+    <string name="catalogue_no_libraries_help">Додайте сумісну бібліотеку, щоб переглядати її книги та шукати в каталозі.</string>
+    <string name="catalogue_search_hint">Книги, автори…</string>
+    <string name="catalogue_search">Пошук</string>
+    <string name="catalogue_loading">Завантаження каталогу…</string>
+    <string name="catalogue_checking">Перевірка бібліотеки…</string>
+    <string name="catalogue_empty">Книг не знайдено</string>
+    <string name="catalogue_empty_help">Змініть пошуковий запит або виберіть іншу бібліотеку.</string>
+    <string name="catalogue_load_more">Завантажити ще</string>
+    <plurals name="catalogue_shown">
+        <item quantity="one">Показано %1$d книгу</item>
+        <item quantity="few">Показано %1$d книги</item>
+        <item quantity="many">Показано %1$d книг</item>
+        <item quantity="other">Показано %1$d книги</item>
+    </plurals>
+    <string name="catalogue_results_for">Результати для «%1$s»</string>
+    <string name="catalogue_invalid_link">Введіть дійсну HTTPS-адресу бібліотеки або підтримуване посилання на сторінку книги.</string>
+    <string name="catalogue_access_error">Для цієї бібліотеки потрібен доступ, який не налаштовано в застосунку. Спробуйте іншу бібліотеку.</string>
+    <string name="catalogue_unsupported_library">За цією адресою немає підтримуваного каталогу аудіокниг.</string>
+    <string name="catalogue_library_error">Не вдалося відкрити ваші онлайн-бібліотеки. Спробуйте ще раз.</string>
+    <string name="catalogue_response_error">Не вдалося прочитати цей каталог. Можливо, бібліотека несумісна або її сервіс тимчасово недоступний.</string>
+    <string name="catalogue_query_error">Пошуковий запит може містити до 300 символів. Скоротіть його та спробуйте ще раз.</string>
+    <string name="catalogue_options">Параметри каталогу</string>
+    <string name="catalogue_manage_libraries">Керувати бібліотеками</string>
+    <string name="catalogue_choose_libraries">Вибрати бібліотеки</string>
+    <string name="catalogue_choose_libraries_help">Виберіть онлайн-бібліотеки для розділу «Каталог».</string>
+    <string name="catalogue_libraries_count">Бібліотеки · %1$d</string>
+    <string name="catalogue_done">Готово</string>
+    <string name="catalogue_up">Назад</string>
+    <string name="catalogue_library_order">За замовчуванням</string>
+    <string name="catalogue_sort_title">Назва</string>
+    <string name="catalogue_sort_author">Автор</string>
+    <string name="catalogue_sort_shown">Сортувати показані книги</string>
+    <string name="catalogue_all_languages">Усі мови</string>
+    <string name="catalogue_language_shown">Мови в показаних результатах</string>
+    <string name="catalogue_no_language_results">У цих результатах немає книг мовою «%1$s»</string>
+    <string name="catalogue_language_help">Завантажте більше результатів або виберіть іншу мову.</string>
+    <string name="catalogue_your_libraries">Ваші бібліотеки</string>
+    <plurals name="catalogue_selected">
+        <item quantity="one">Вибрано %1$d бібліотеку</item>
+        <item quantity="few">Вибрано %1$d бібліотеки</item>
+        <item quantity="many">Вибрано %1$d бібліотек</item>
+        <item quantity="other">Вибрано %1$d бібліотеки</item>
+    </plurals>
+    <string name="catalogue_library_removed">Бібліотека більше недоступна</string>
+    <string name="catalogue_include_library">Показувати %1$s у розділі «Каталог»</string>
+    <string name="catalogue_browse_library">Переглянути %1$s</string>
+    <string name="catalogue_library_options">Параметри бібліотеки %1$s</string>
+    <string name="catalogue_rename">Перейменувати</string>
+    <string name="catalogue_share">Поділитися</string>
+    <string name="catalogue_remove">Видалити</string>
+    <string name="catalogue_rename_library">Перейменувати бібліотеку</string>
+    <string name="catalogue_library_name">Назва бібліотеки</string>
+    <string name="catalogue_remove_library">Видалити бібліотеку?</string>
+    <string name="catalogue_remove_library_help">Бібліотеку буде видалено з розділу «Каталог». Збережені книги, завантаження та історія прослуховування залишаться.</string>
+    <string name="catalogue_manage_help">Виберіть бібліотеки для розділу «Каталог». Натисніть назву бібліотеки, щоб переглянути її каталог.</string>
+</resources>

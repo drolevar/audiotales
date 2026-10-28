@@ -70,7 +70,7 @@ class CarCatalogueBrowserTest {
         val first = car.search("query")
         assertEquals(1, catalogue.requests.size)
         val more = first.filterIsInstance<CarCatalogueItem.Folder>().single()
-        assertEquals("More from Source a", more.title)
+        assertEquals(CarCatalogueLabel.MoreFrom("Source a"), more.label)
         assertEquals(listOf("one"), first.filterIsInstance<CarCatalogueItem.Book>().map { it.book.remoteId })
 
         val second = requireNotNull(car.children(more.mediaId))
@@ -91,7 +91,7 @@ class CarCatalogueBrowserTest {
         }
         val car = CarCatalogueBrowser(catalogue)
         val retry = car.search("query").single() as CarCatalogueItem.Folder
-        assertEquals("Retry Source b", retry.title)
+        assertEquals(CarCatalogueLabel.Retry("Source b"), retry.label)
         expectFailure<IOException> { car.children(retry.mediaId) }
         assertEquals(retry, car.item(retry.mediaId))
         failB = false
@@ -121,7 +121,7 @@ class CarCatalogueBrowserTest {
         val result = CarCatalogueBrowser(catalogue).search("query")
         assertTrue(testScheduler.currentTime - before <= 10_000)
         assertEquals(listOf("b"), result.filterIsInstance<CarCatalogueItem.Book>().map { it.book.libraryId })
-        assertEquals("Retry Source a", result.filterIsInstance<CarCatalogueItem.Folder>().single().title)
+        assertEquals(CarCatalogueLabel.Retry("Source a"), result.filterIsInstance<CarCatalogueItem.Folder>().single().label)
         catalogue.libraries.value = listOf(source("a"))
         expectFailure<IOException> { CarCatalogueBrowser(catalogue).search("query") }
     }
@@ -208,7 +208,7 @@ class CarCatalogueBrowserTest {
             assertTrue(page.size <= 100)
             ids.addAll(page.filterIsInstance<CarCatalogueItem.Book>().map { it.book.remoteId })
             val more = page.filterIsInstance<CarCatalogueItem.Folder>().singleOrNull() ?: break
-            assertEquals("More results", more.title)
+            assertEquals(CarCatalogueLabel.MoreResults, more.label)
             page = requireNotNull(car.children(more.mediaId))
         }
         assertEquals((0..249).map(Int::toString), ids)
@@ -245,7 +245,7 @@ class CarCatalogueBrowserTest {
         // Follow cached chunks until reaching the provider continuation.
         while (true) {
             val more = page.filterIsInstance<CarCatalogueItem.Folder>().single()
-            if (more.title.startsWith("More from")) {
+            if (more.label is CarCatalogueLabel.MoreFrom) {
                 expectFailure<IOException> { car.children(more.mediaId) }
                 break
             }

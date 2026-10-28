@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="nav_downloads">Nedlastinger</string>
+    <string name="nav_downloads_description">Administrer bøker for lytting uten nett</string>
+</resources>

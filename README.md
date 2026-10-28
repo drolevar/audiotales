@@ -36,6 +36,16 @@ browsing, typed search and playback controls have passed
 sampled tests with Google's Desktop Head Unit. Broader car compatibility,
 rotary controls and physical headset/Bluetooth testing remain in progress.
 
+## Languages
+
+Current development builds support English, Russian, Ukrainian and Norwegian
+Bokmål. On Android 13 and later, choose a language in the device's
+**Settings → Apps → AudioTales → Language**. On older Android versions,
+AudioTales follows the device language. Books and library descriptions keep
+their original language.
+
+These translations are not included in the 0.2.1 release.
+
 ## Reporting a problem
 
 We’re planning a simple way to report problems from inside the app, without needing a GitHub account. You’ll be able to describe what happened, review the diagnostic information to include, and send your report.

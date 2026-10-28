@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collection_browse_books">Переглянути каталог</string>
+    <string name="collection_all">Усі</string>
+    <string name="collection_in_progress">Слухаю</string>
+    <string name="collection_downloaded">Завантажені</string>
+    <string name="collection_recent">Нещодавні</string>
+    <string name="collection_title">Назва</string>
+    <string name="collection_author">Автор</string>
+    <string name="collection_sort">Сортування: %1$s</string>
+    <string name="collection_no_matches">Немає книг за цим фільтром</string>
+    <string name="collection_no_matches_description">Виберіть інший фільтр, щоб побачити збережені книги.</string>
+    <string name="collection_not_started">Ще не розпочато</string>
+    <string name="collection_finished">Прослухано</string>
+    <string name="collection_percentage">Прослухано %1$d%%</string>
+    <string name="collection_track_position">Доріжка %1$d із %2$d · %3$s</string>
+    <string name="collection_status_pair">%1$s · %2$s</string>
+    <string name="collection_downloading">Завантаження · готово доріжок: %1$d із %2$d</string>
+    <string name="collection_paused">Завантаження призупинено · готово доріжок: %1$d із %2$d</string>
+    <string name="collection_download_failed">Помилка завантаження · готово доріжок: %1$d із %2$d</string>
+    <string name="collection_partial">Завантажено доріжок: %1$d із %2$d</string>
+    <string name="collection_removing">Видалення завантажень</string>
+    <string name="collection_download_book">Завантажити %1$s</string>
+    <string name="collection_pause_book">Призупинити завантаження %1$s</string>
+    <string name="collection_resume_book">Продовжити завантаження %1$s</string>
+    <string name="collection_retry_book">Повторити завантаження %1$s</string>
+    <string name="collection_view_downloads">Переглянути завантаження</string>
+    <string name="collection_download_action">Завантажити</string>
+    <string name="collection_pause_action">Призупинити завантаження</string>
+    <string name="collection_resume_action">Продовжити завантаження</string>
+    <string name="collection_retry_action">Повторити завантаження</string>
+    <string name="collection_open_player">Відкрити програвач</string>
+    <string name="collection_book_actions">Дії з книгою %1$s</string>
+    <string name="collection_remove_downloads">Видалити завантаження</string>
+    <string name="collection_remove_title">Видалити аудіо?</string>
+    <string name="collection_remove_description">Завантажене аудіо книги «%1$s» буде видалено. Книга та позиція прослуховування залишаться.</string>
+    <string name="collection_cancel">Скасувати</string>
+    <string name="collection_action_failed">Не вдалося оновити завантаження. Перевірте з’єднання та спробуйте ще раз.</string>
+    <string name="collection_dismiss">Закрити</string>
+</resources>

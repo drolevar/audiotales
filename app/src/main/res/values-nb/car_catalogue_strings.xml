@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="car_catalogue_retry_library">Prøv %1$s igjen</string>
+    <string name="car_catalogue_more_from_library">Mer fra %1$s</string>
+    <string name="car_catalogue_more_results">Flere resultater</string>
+</resources>

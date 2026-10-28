@@ -68,7 +68,7 @@
     <string name="player_external_failed">This link could not be opened or shared.</string>
     <string name="player_download_check_failed">Downloads could not be checked. Please try again.</string>
     <string name="player_current_track">Track %1$d of %2$d</string>
-    <string name="player_unknown_duration">—:—</string>
+    <string name="player_unknown_duration" translatable="false">—:—</string>
     <string name="player_speed">Speed</string>
     <string name="player_sleep_timer">Sleep timer</string>
     <string name="player_tracks">Tracks</string>

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="collection_browse_books">Utforsk bøker</string>
+    <string name="collection_all">Alle</string>
+    <string name="collection_in_progress">Påbegynt</string>
+    <string name="collection_downloaded">Lastet ned</string>
+    <string name="collection_recent">Sist lyttet til</string>
+    <string name="collection_title">Tittel</string>
+    <string name="collection_author">Forfatter</string>
+    <string name="collection_sort">Sorter etter %1$s</string>
+    <string name="collection_no_matches">Ingen bøker samsvarer med dette filteret</string>
+    <string name="collection_no_matches_description">Velg et annet filter for å se de lagrede bøkene dine.</string>
+    <string name="collection_not_started">Ikke påbegynt</string>
+    <string name="collection_finished">Fullført</string>
+    <string name="collection_percentage">%1$d%% avspilt</string>
+    <string name="collection_track_position">Spor %1$d av %2$d · %3$s</string>
+    <string name="collection_status_pair">%1$s · %2$s</string>
+    <string name="collection_downloading">Laster ned · %1$d av %2$d spor klare</string>
+    <string name="collection_paused">Nedlasting på pause · %1$d av %2$d spor klare</string>
+    <string name="collection_download_failed">Nedlasting mislyktes · %1$d av %2$d spor klare</string>
+    <string name="collection_partial">%1$d av %2$d spor lastet ned</string>
+    <string name="collection_removing">Fjerner nedlastinger</string>
+    <string name="collection_download_book">Last ned %1$s</string>
+    <string name="collection_pause_book">Sett nedlasting av %1$s på pause</string>
+    <string name="collection_resume_book">Fortsett nedlasting av %1$s</string>
+    <string name="collection_retry_book">Prøv å laste ned %1$s igjen</string>
+    <string name="collection_view_downloads">Vis nedlastinger</string>
+    <string name="collection_download_action">Last ned</string>
+    <string name="collection_pause_action">Sett nedlasting på pause</string>
+    <string name="collection_resume_action">Fortsett nedlasting</string>
+    <string name="collection_retry_action">Prøv nedlasting igjen</string>
+    <string name="collection_open_player">Åpne spiller</string>
+    <string name="collection_book_actions">Handlinger for %1$s</string>
+    <string name="collection_remove_downloads">Fjern nedlastinger</string>
+    <string name="collection_remove_title">Fjern lyd?</string>
+    <string name="collection_remove_description">Den nedlastede lyden til «%1$s» fjernes. Boken og lytteposisjonen din beholdes.</string>
+    <string name="collection_cancel">Avbryt</string>
+    <string name="collection_action_failed">Kunne ikke oppdatere nedlastinger. Sjekk tilkoblingen og prøv igjen.</string>
+    <string name="collection_dismiss">Lukk</string>
+</resources>

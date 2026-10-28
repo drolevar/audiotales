@@ -1,0 +1,54 @@
+<resources>
+    <string name="book_details_title">О книге</string>
+    <string name="book_details_up">Назад</string>
+    <string name="book_details_options">Действия с книгой</string>
+    <string name="book_details_save">В Мои книги</string>
+    <string name="book_details_refresh">Обновить сведения</string>
+    <string name="book_details_share">Поделиться книгой</string>
+    <string name="book_details_loading">Загрузка сведений о книге…</string>
+    <string name="book_details_load_failed">Не удалось загрузить книгу. Повторите попытку.</string>
+    <string name="book_details_saved">✓ В Моих книгах</string>
+    <string name="book_details_unsaved">Нет в Моих книгах</string>
+    <string name="book_details_listen">Слушать</string>
+    <string name="book_details_resume">Продолжить</string>
+    <string name="book_details_actions_save">Действия «Слушать» и «Скачать» также сохраняют книгу в Моих книгах.</string>
+    <string name="book_details_track_saves">Воспроизведение трека также сохраняет книгу в Моих книгах.</string>
+    <string name="book_details_connecting">Подключение к плееру…</string>
+    <plurals name="book_details_offline">
+        <item quantity="one">Без интернета · сохранено: %1$d из %2$d трека</item>
+        <item quantity="few">Без интернета · сохранено: %1$d из %2$d треков</item>
+        <item quantity="many">Без интернета · сохранено: %1$d из %2$d треков</item>
+        <item quantity="other">Без интернета · сохранено: %1$d из %2$d трека</item>
+    </plurals>
+    <plurals name="book_details_download_count">
+        <item quantity="one">Скачано: %1$d из %2$d трека</item>
+        <item quantity="few">Скачано: %1$d из %2$d треков</item>
+        <item quantity="many">Скачано: %1$d из %2$d треков</item>
+        <item quantity="other">Скачано: %1$d из %2$d трека</item>
+    </plurals>
+    <string name="book_details_save_failed">Не удалось сохранить книгу. Повторите попытку.</string>
+    <string name="book_details_play_failed">Не удалось начать воспроизведение. Нажмите «Слушать» ещё раз.</string>
+    <string name="book_details_download_failed">Не удалось обновить загрузки. Проверьте подключение и повторите попытку.</string>
+    <string name="book_details_tracks">Треки</string>
+    <string name="book_details_audio_loading">Загрузка аудио…</string>
+    <string name="book_details_audio_failed">Не удалось загрузить аудио.</string>
+    <string name="book_details_audio_unresolved">Аудио не загружено.</string>
+    <string name="book_details_retry_audio">Загрузить аудио ещё раз</string>
+    <plurals name="book_details_track_count">
+        <item quantity="one">%d трек</item>
+        <item quantity="few">%d трека</item>
+        <item quantity="many">%d треков</item>
+        <item quantity="other">%d трека</item>
+    </plurals>
+    <string name="book_details_description">Описание</string>
+    <string name="book_details_no_description">Описание отсутствует.</string>
+    <string name="book_details_refresh_failed">Не удалось обновить сведения. Повторите попытку при подключении к интернету.</string>
+    <string name="book_details_current_position">Сохранённая позиция: %1$s</string>
+    <string name="book_details_downloading">Загрузка</string>
+    <string name="book_details_checking_downloads">Проверка загрузок…</string>
+    <string name="book_details_saved_refresh_failed">Не удалось обновить сведения о сохранённой книге.</string>
+    <string name="book_details_connection_failed">Не удалось подключиться к плееру.</string>
+    <string name="book_details_paused">Приостановлено</string>
+    <string name="book_details_download_status_failed">Ошибка загрузки</string>
+    <string name="book_details_queued">В очереди</string>
+</resources>

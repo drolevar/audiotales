@@ -1,5 +1,6 @@
 package io.github.drolevar.audiotales.playback
 
+import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.C
@@ -26,6 +27,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.guava.future
 import java.util.UUID
+import io.github.drolevar.audiotales.R
 
 internal val prepareBookRemovalCommand = SessionCommand("io.github.drolevar.audiotales.PREPARE_BOOK_REMOVAL", Bundle.EMPTY)
 internal const val BOOK_REMOVAL_TOKEN = "bookRemovalToken"
@@ -36,8 +38,7 @@ private const val SEARCH_SUPPORTED = "android.media.browse.SEARCH_SUPPORTED"
 internal class LibrarySessionCallback(
     private val library: LibraryRepository,
     private val scope: CoroutineScope,
-    rootTitle: String,
-    myBooksTitle: String,
+    private val context: Context,
     private val storage: MediaStorage,
     private val progress: PlaybackProgressRecorder,
     private val sleepTimer: SleepTimerController,
@@ -52,22 +53,22 @@ internal class LibrarySessionCallback(
     private data class SearchKey(val browser: MediaSession.ControllerInfo, val query: String)
     private class SearchSnapshot(var items: List<CarCatalogueItem>? = null, var error: Boolean = false)
     private val searches = linkedMapOf<SearchKey, SearchSnapshot>()
-    private val root = MediaItem.Builder()
+    private val root: MediaItem get() = MediaItem.Builder()
         .setMediaId(LibraryMediaIds.ROOT)
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(rootTitle)
+                .setTitle(context.getString(R.string.media_library_title))
                 .setIsBrowsable(true)
                 .setIsPlayable(false)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
                 .build(),
         )
         .build()
-    private val myBooks = MediaItem.Builder()
+    private val myBooks: MediaItem get() = MediaItem.Builder()
         .setMediaId(LibraryMediaIds.MY_BOOKS)
         .setMediaMetadata(
             MediaMetadata.Builder()
-                .setTitle(myBooksTitle)
+                .setTitle(context.getString(R.string.my_books))
                 .setIsBrowsable(true)
                 .setIsPlayable(false)
                 .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)
@@ -427,7 +428,11 @@ internal class LibrarySessionCallback(
                     setMediaType(MediaMetadata.MEDIA_TYPE_AUDIO_BOOK)
                 }
                 is CarCatalogueItem.Folder -> {
-                    setTitle(title)
+                    setTitle(when (val label = label) {
+                        is CarCatalogueLabel.Retry -> context.getString(R.string.car_catalogue_retry_library, label.libraryName)
+                        is CarCatalogueLabel.MoreFrom -> context.getString(R.string.car_catalogue_more_from_library, label.libraryName)
+                        CarCatalogueLabel.MoreResults -> context.getString(R.string.car_catalogue_more_results)
+                    })
                     setIsBrowsable(true)
                     setIsPlayable(false)
                     setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_AUDIO_BOOKS)

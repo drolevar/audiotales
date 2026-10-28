@@ -39,6 +39,30 @@ Material 3 adaptive navigation exposes My books, Browse and Settings. My books h
 
 LibriVox.org uses its public API without a partner client parameter. The shared partner protocol requires a build-time client query configured through `audiotales.partnerClientQuery` in ignored `local.properties`. Without it, the app reports that access is not configured. Never commit that value or generated BuildConfig output. A value embedded in an APK is extractable and is not a secret-storage mechanism. The private compatibility build has been exercised against the supplied partner sites; independent-client provisioning and public-distribution arrangements remain unresolved. Do not present this as an official partnership or publish the compatibility configuration as a production credential.
 
+## Interface languages
+
+App-owned strings and plurals are translated into Russian (`values-ru`),
+Ukrainian (`values-uk`) and Norwegian Bokmål (`values-nb`), with English in
+unqualified `values` resources. Preserve positional format arguments and use
+the relevant quantity to choose plural forms. Provider metadata and
+listener-defined library names remain in their original language.
+
+AGP generates the locale configuration from `res/resources.properties`
+(`unqualifiedResLocale=en`). Package only `en`, `ru`, `uk` and `nb` language
+resources so dependency translations do not advertise unsupported app
+languages. Android 13+ provides the system per-app language setting; API 26–32
+follows the device language. No custom picker or AppCompat dependency is used.
+
+Car catalogue caches retain semantic labels and original library names.
+Resolve app-owned labels using current service resources when returning media
+items, without replacing queues or fetching provider data again. A car host
+may keep its own presentation cache until it requests the items again.
+
+`LocalizationResourcesTest` covers regional language resolution, English
+fallback, Slavic plurals, format arguments, dependency-supplied Media3 control
+labels and the generated Android locale list. The car integration test changes
+the resource context while retaining cached catalogue items and playback state.
+
 ## Toolchain
 
 The minimum Android version remains **API 26 / Android 8.0**. The current scaffold compiles and targets **API 37**.
@@ -523,6 +547,23 @@ player, with the separate author. Brief streaming and native Pause used the
 shared service. The installed APK hash matched the verified candidate. This
 qualifies the sampled artwork paths; it does not complete voice, rotary,
 headset/Bluetooth or general car qualification.
+
+### Interface language verification — 2026-10-28
+
+The debug build, lint and all 215 JVM tests passed. Lint reported zero errors,
+13 warnings and one hint. The final APK passed 29 focused Android tests on
+API 26 and 30 on API 37.2; the additional current-platform test verifies the
+native per-app language configuration. These include regional language
+resolution, native plural/format handling, English fallback, Media3 control
+translations and cached car labels changing without provider refetches,
+saved-book additions or changes to the playback state.
+
+On API 37.2, Android's native language picker selected Ukrainian, Russian and
+Norwegian Bokmål. Cold launches and My books/Settings screens displayed each
+language with the original fixture book metadata intact. Visual review caught
+and corrected plural filter wording reused as an individual download status.
+These are disposable-emulator checks; this milestone does not add a physical
+phone, projected-DHU or audible-output qualification claim.
 
 ## Primary references
 

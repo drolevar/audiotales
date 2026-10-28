@@ -42,6 +42,7 @@ android {
         applicationId = "io.github.drolevar.audiotales"
         minSdk = 26
         targetSdk = 37
+        resourceConfigurations += listOf("en", "ru", "uk", "nb")
         versionCode = releaseVersion?.second ?: 1
         versionName = releaseVersion?.first ?: "0.1.0-dev"
         buildConfigField("String", "PARTNER_CLIENT_QUERY", "\"$partnerClientQuery\"")
@@ -71,6 +72,10 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    androidResources {
+        generateLocaleConfig = true
     }
 
     sourceSets.getByName("androidTest").assets.directories.add("$projectDir/schemas")

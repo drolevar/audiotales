@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="incoming_register_title">Registrer bibliotek?</string>
+    <string name="incoming_register_message">Denne boken kommer fra %1$s, et bibliotek som ikke er aktivert i Utforsk. Registrer det for å sjekke kompatibilitet og åpne bokdetaljer. Boken blir ikke lagret eller spilt av automatisk.</string>
+    <string name="incoming_register">Registrer og åpne</string>
+    <string name="incoming_cancel">Avbryt</string>
+    <string name="incoming_close">Lukk</string>
+    <string name="incoming_retry">Prøv igjen</string>
+    <string name="incoming_opening">Åpner bok</string>
+    <string name="incoming_loading">Sjekker boklenken…</string>
+    <string name="incoming_error_title">Kunne ikke åpne boklenken</string>
+    <string name="incoming_invalid">Del én støttet HTTPS-lenke til en bok eller en AudioTales-boklenke. Denne lenken er ugyldig eller støttes ikke.</string>
+    <string name="incoming_unsupported">Dette biblioteket returnerte ikke kompatibel bokinformasjon. Sjekk lenken eller prøv igjen.</string>
+    <string name="incoming_network">Kunne ikke nå biblioteket, eller det returnerte en feil. Sjekk tilkoblingen og prøv igjen.</string>
+    <string name="incoming_not_configured">Tilgang til dette biblioteket er ikke konfigurert i denne versjonen.</string>
+</resources>
