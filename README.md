@@ -38,13 +38,13 @@ rotary controls and physical headset/Bluetooth testing remain in progress.
 
 ## Languages
 
-Current development builds support English, Russian, Ukrainian and Norwegian
+Version 0.2.2 supports English, Russian, Ukrainian and Norwegian
 Bokmål. On Android 13 and later, choose a language in the device's
 **Settings → Apps → AudioTales → Language**. On older Android versions,
 AudioTales follows the device language. Books and library descriptions keep
 their original language.
 
-These translations are not included in the 0.2.1 release.
+The translations are available in the [0.2.2 release](https://github.com/drolevar/audiotales/releases/tag/v0.2.2).
 
 ## Reporting a problem
 

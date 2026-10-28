@@ -529,6 +529,19 @@ artwork on the physical API 28 phone. It retained the existing application UID
 and three saved books. The earlier signed candidate supplies the projected DHU
 evidence below; the final GitHub APK was not retested through DHU.
 
+The [v0.2.2 release workflow](https://github.com/drolevar/audiotales/actions/runs/40742482173)
+successfully built and published localization commit
+`9baa748be88a96ec6a97f98b0bfdf7daec757102`, after that commit passed main CI.
+All four published assets matched the exact workflow artifact after independent
+download and verification. The actual APK retained the existing signing
+identity and passed version `0.2.2`/code `2002`, provenance and native alignment
+checks. It then passed cold launch, sample partner-library registration/book
+lookup and brief streaming/Pause on API 26 and API 37.2. On API 37.2, the signed
+APK advertised all four supported languages in Android's native picker and
+cold-launched into Ukrainian, Russian and Norwegian Bokmål My books/Settings
+with the saved sample book intact. These are disposable-emulator runtime
+checks; no additional physical-audio or projected-DHU claim is made.
+
 ### Shared book artwork verification — 2026-10-28
 
 Debug and minified release builds passed, with zero lint errors, 13 warnings
