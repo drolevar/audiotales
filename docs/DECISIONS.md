@@ -267,3 +267,25 @@ Keep readers separate from authors and attach structured provider reader IDs and
 Room schema 8 adds nullable track reader-credit JSON without rewriting prior identities, transports, progress, bookmarks or download resources. Keep schemas 1–7. Audio resolution may populate credits; source URL renewal remains transport-only. A saved LibriVox metadata refresh uses one extended response and parses section attribution independently of audio URLs. Update credits atomically only when the complete provider section-reference set matches the saved tracks. Omitted or malformed credits preserve known values; an explicit empty list clears that track. A changed section set leaves prior credits intact while valid book information may still refresh.
 
 Show **Read by** in existing Book details and player information/track sheets. A book-wide summary requires complete, identical nonempty credits on every track; mixed or unknown attribution stays per-track. Saved credits remain available offline and after refresh failure. Existing saved books can acquire credits through the ordinary **Refresh details** or player information refresh action. Publish refreshed player book and tracks together, guarded against inactive screens, newer requests and removal. No new player or automatic audio renewal is introduced.
+
+## 23. Signed builds from version tags — accepted 2026-10-28
+
+Pushing a stable version tag such as `v0.2.0` should trigger a signed release APK
+build in GitHub Actions. The APK version name comes from the tag without `v`;
+version codes must increase with supported version ordering. Keep normal branch
+and pull-request verification unsigned and independent of signing credentials.
+
+Use the existing maintainer signing identity selected for AudioTales, and retain
+that identity for future updates. Keep key material and passwords out
+of Git. Verify the signed APK's identity, version, signature and native-library
+alignment, and retain its checksum, source commit and R8 mapping with the build.
+The immediate deliverable is a downloadable GitHub Actions build artifact.
+Creating a GitHub Release, store publishing and making the repository public are
+separate actions.
+
+The user prioritized obtaining a release build from GitHub before the remaining
+Android Auto qualification. Continue Auto checks with available emulators and
+validators afterward; physical headset/Bluetooth checks will be user-run. These
+results remain distinct from preparing and signing the APK. This supersedes the
+earlier delivery order that placed release-pipeline work after all reliability
+qualification.

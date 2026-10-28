@@ -9,12 +9,30 @@ plugins {
     alias(libs.plugins.room)
 }
 
-// Local integration configuration. No partner access value is committed to the repository.
+// CI can provide the integration value without writing it into the checkout.
+// APK-embedded configuration is extractable; this is not secret storage.
 val localConfiguration = Properties().apply {
     rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
-val partnerClientQuery = localConfiguration.getProperty("audiotales.partnerClientQuery", "")
+val partnerClientQuery = (providers.environmentVariable("AUDIOTALES_PARTNER_CLIENT_QUERY").orNull
+    ?: localConfiguration.getProperty("audiotales.partnerClientQuery", ""))
     .replace("\\", "\\\\").replace("\"", "\\\"")
+    .replace("\r", "\\r").replace("\n", "\\n").replace("\t", "\\t")
+
+// Release builds use the validated tag; ordinary development builds keep their defaults.
+val releaseTag = providers.environmentVariable("AUDIOTALES_RELEASE_TAG").orNull
+val releaseVersion = releaseTag?.let { tag ->
+    val match = Regex("v(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)").matchEntire(tag)
+        ?: error("AUDIOTALES_RELEASE_TAG must be a stable vMAJOR.MINOR.PATCH tag")
+    val (major, minor, patch) = match.destructured
+    val components = listOf(major, minor, patch).map { it.toLongOrNull() ?: error("Release version is out of range") }
+    require(components[0] in 0L..2099L && components[1] in 0L..999L && components[2] in 0L..999L) {
+        "Release version components are out of range"
+    }
+    val code = components[0] * 1_000_000L + components[1] * 1_000L + components[2]
+    require(code in 1L..2_100_000_000L) { "Release versionCode must be positive and at most 2100000000" }
+    tag.removePrefix("v") to code.toInt()
+}
 
 android {
     namespace = "io.github.drolevar.audiotales"
@@ -24,8 +42,8 @@ android {
         applicationId = "io.github.drolevar.audiotales"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0-dev"
+        versionCode = releaseVersion?.second ?: 1
+        versionName = releaseVersion?.first ?: "0.1.0-dev"
         buildConfigField("String", "PARTNER_CLIENT_QUERY", "\"$partnerClientQuery\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

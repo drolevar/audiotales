@@ -9,6 +9,7 @@ output-metadata.json
 captures/
 .externalNativeBuild/
 .cxx/
+__pycache__/
 
 # Local Android Studio / SDK configuration
 local.properties
@@ -22,6 +23,8 @@ render.experimental.xml
 # Signing material, service configuration, and heap dumps
 *.jks
 *.keystore
+*.p12
+*.pfx
 keystore.properties
 google-services.json
 *.hprof

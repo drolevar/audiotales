@@ -435,7 +435,23 @@ Resume was accepted online before connectivity was removed: incomplete downloads
 
 ## Release preparation
 
-Release signing is not configured. Keep signing keys and credentials outside the repository. Preserve each release's version, Git commit, and R8 mappings for diagnostics. Distribution channels, release automation, and a public repository transition remain separate decisions.
+The [signed-build workflow](RELEASING.md) validates stable version-tag pushes and
+produces an APK artifact with its checksum, source/version provenance and R8
+mapping. Signing credentials are supplied only after the unsigned release build,
+release lint and shared-source JVM tests pass. Ordinary branch/PR CI stays
+unsigned. Keep signing keys and credentials outside Git; creating a GitHub
+Release, store publishing and a public repository transition remain separate
+decisions.
+
+Local validation on 2026-10-28 built the minified `0.2.0` candidate, ran release
+lint and all 190 JVM tests with no failures, errors or skips. The normal debug
+build/lint/test gate also passed. Both lint variants reported zero errors, 11
+warnings and one hint. Six release-tooling tests and actionlint 1.7.12 passed.
+Actual signed candidates passed certificate, package/version, non-debuggable,
+ZIP alignment and ELF load-segment checks for all eight native libraries; a wrong
+signer was rejected. These were local validation builds with a test version
+input, not a pushed release tag or a GitHub-produced release artifact. A real
+tag-triggered run and minified runtime acceptance remain separate evidence.
 
 ## Primary references
 
